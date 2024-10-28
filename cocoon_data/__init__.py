@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.patches as patches
 from ipywidgets import *
 import ipywidgets as widgets
-from IPython.display import *
 from graphviz import Digraph
 from pygments import highlight
 from pygments.lexers import PythonLexer, SqlLexer, YamlLexer
@@ -21,15 +20,12 @@ import faiss
 from tqdm import tqdm
 import base64
 from io import BytesIO
-import heapq
 import chardet
 import datetime
 from functools import partial
-from contextlib import contextmanager
+
 import yaml
-from datasketch import MinHash, MinHashLSH
 from bs4 import BeautifulSoup
-import time
 from collections import OrderedDict
 from collections import deque
 import warnings
@@ -47,22 +43,7 @@ from .constant import *
 from .data_type import *
 from .widgets import *
 from .file_sys import *
-
-try:
-    import rasterio
-    from rasterio.warp import calculate_default_transform, reproject, Resampling
-    from pyproj import Transformer, CRS
-    from rasterio.windows import from_bounds
-    from rasterio.features import rasterize
-    from rasterio.transform import from_origin, Affine
-    from rasterio.enums import Resampling as ResamplingMethods
-    import geopandas as gpd
-    from shapely.geometry import Polygon
-    from shapely.ops import transform
-    from rasterio.transform import array_bounds
-    import plotly.graph_objects as go
-except:
-    pass
+from .workflow import *
 
 
 icon_import = False
@@ -320,77 +301,6 @@ def extract_grid_data_type(grid):
 
 
 
-def generate_draggable_graph_html_dynamically(graph_data):
-    number_nodes = len(graph_data["nodes"])
-    svg_width = min(800, 300 + 50 * number_nodes)
-    svg_height = 100 + number_nodes * 30
-    return svg_width, svg_height, generate_draggable_graph_html_color(graph_data, svg_height, svg_width)
-
-
-def display_draggable_graph_html(graph_data):
-    _, svg_height, html_content = generate_draggable_graph_html_dynamically(graph_data)
-    display_html_iframe(html_content, width="100%", height=f"{svg_height+20}px")
-
-def cluster_tables(tables, threshold=0.5, num_perm=128):
-
-    lsh = MinHashLSH(threshold=threshold, num_perm=num_perm)
-
-    minhashes = {}
-    for table_name, attributes in tables.items():
-        minhash = MinHash(num_perm=128)
-        for attribute in attributes:
-            minhash.update(attribute.encode('utf8'))
-        lsh.insert(table_name, minhash)
-        minhashes[table_name] = minhash
-
-    clusters = []
-    seen = set()
-
-    for table_name, minhash in minhashes.items():
-        if table_name in seen:
-            continue
-        
-        similar_tables = lsh.query(minhash)
-        
-        new_cluster = {table for table in similar_tables if table not in seen}
-        
-        new_cluster.add(table_name)
-        
-        if new_cluster:
-            clusters.append(new_cluster)
-            seen.update(new_cluster)
-
-            
-    return clusters
-
-
-
-def group_tables_exclude_single(tables):
-    attribute_to_table = {}
-    
-    for table, attributes in tables.items():
-        attributes_sorted = tuple(sorted(attributes))
-        
-        if attributes_sorted not in attribute_to_table:
-            attribute_to_table[attributes_sorted] = [table]
-        else:
-            attribute_to_table[attributes_sorted].append(table)
-    
-    grouped_tables = [tables for tables in attribute_to_table.values() if len(tables) > 1]
-    
-    return grouped_tables
-
-
-
-def replace_keys_and_values_with_index(nodes, edges):
-    node_index = {node: index for index, node in enumerate(nodes)}
-    updated_edges = {node_index[node]: [node_index[edge] for edge in edges[node]] for node in edges}
-    return updated_edges
-
-
-
-
-
 
 def create_html_content_project(title, descriptions, page_no):
     nodes = []
@@ -451,540 +361,6 @@ def create_html_content_project(title, descriptions, page_no):
     {generate_workflow_html_multiple(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices)}
     """
     return html_content
-
-
-
-def generate_html_for_sanity_check(document):
-    html_output = ""
-
-    duplicate_rows = document.get("duplicate_rows", {})
-    index_columns = document.get("index_columns", {})
-    missing_columns = document.get("missing_columns", {})
-    duplicate_columns = document.get("duplicate_columns", {})
-    x_y_columns = document.get("x_y_columns", {})
-    data_type = document.get("data_type", {})
-
-    num_duplicated_rows = duplicate_rows.get("num_duplicated_rows", 0)
-    if num_duplicated_rows > 0:
-        html_output += "<h3>Duplicated Rows</h3>"
-        html_output += f"There are <b>{num_duplicated_rows}</b> duplicated rows in the data.<br>"
-        remove_duplicates = duplicate_rows.get("remove_duplicates", False)
-        html_output += f"The duplicated rows <b>{'have' if remove_duplicates else 'have not'} been removed</b>.<br>"
-        html_output += f"<hr>"
-
-    index_column_names = index_columns.get("index_column_names", [])
-    if index_column_names:
-        html_output += "<h3>Index Columns</h3>"
-        html_output += f"There are <b>{len(index_column_names)}</b> columns that look like indices: <i>{', '.join(index_column_names)}</i><br>"
-        remove_index_columns = index_columns.get("remove_columns", [])
-        html_output += f"{len(remove_index_columns)} index columns <b>{'have' if remove_index_columns else 'have not'} been removed</b>.<br>"
-        html_output += f"<hr>"
-
-    missing_column_names = missing_columns.get("missing_column_names", [])
-    if missing_column_names:
-        html_output += "<h3>Missing Columns</h3>"
-        html_output += f"There are <b>{len(missing_column_names)}</b> columns whose values are all missing: <i>{', '.join(missing_column_names)}</i><br>"
-        remove_missing_columns = missing_columns.get("remove_columns", [])
-        html_output += f"{len(remove_missing_columns)} missing columns <b>{'have' if remove_missing_columns else 'have not'} been removed</b>.<br>"
-        html_output += f"<hr>"
-
-    duplicated_column_names = duplicate_columns.get("duplicated_column_names", [])
-    if duplicated_column_names:
-        html_output += "<h3>Duplicate Columns</h3>"
-        html_output += f"There are <b>{len(duplicated_column_names)}</b> groups of columns that have the same names:<br>"
-        html_output += "<ol>"
-        for duplicate_column in duplicated_column_names:
-            html_output += f"<li>{len(duplicate_column)} columns named <i>{duplicate_column[0]}</i><br></li>"
-        html_output += "</ol>"
-        remove_duplicate_columns = duplicate_columns.get("remove_columns", [])
-        html_output += f"{len(remove_duplicate_columns)} duplicate columns <b>{'have' if remove_duplicate_columns else 'have not'} been removed</b>.<br>"
-        html_output += f"<hr>"
-
-    x_y_column_names = x_y_columns.get("x_y_column_names", [])
-    if x_y_column_names:
-        html_output += "<h3>X-Y Columns</h3>"
-        html_output += f"There are <b>{len(x_y_column_names)}</b> pairs of columns that look like the result of a merge:<br>"
-        html_output += "<ol>"
-        for x_y_column in x_y_column_names:
-            html_output += f"<li><i>{', '.join(x_y_column)}</i><br></li>"
-        html_output += "</ol>"
-        remove_x_y_columns = x_y_columns.get("remove_columns", [])
-        html_output += f"{len(remove_x_y_columns)} x-y columns <b>{'have' if remove_x_y_columns else 'have not'} been removed</b>.<br>"
-        html_output += f"<hr>"
-
-    invalid_data_examples = {}
-    for column_name, column_data in data_type.items():
-        invalid_rows = column_data.get("invalid_rows", [])
-        if invalid_rows:
-            invalid_data_examples[column_name] = {"data_type": column_data.get("data_type", "unknown"),
-                                                  "invalid_rows": invalid_rows}
-
-    if invalid_data_examples:
-        html_output += "<h3>Invalid Data Type</h3>"
-        html_output += f"There are <b>{len(invalid_data_examples)}</b> columns contains values of invalid data type:<br>"
-        html_output += "<ol>"
-        for column_name, example_data in invalid_data_examples.items():
-            html_output += f"<li> <i>{column_name}</i> is of type <i>{example_data['data_type']}</i><br>"
-            html_output += f"        Examples of invalid data: <i>{example_data['invalid_rows']}</i><br></li>"
-        html_output += "</ol>"
-        html_output += f"Rows with invalid data <b>have been removed</b>."
-        html_output += f"<hr>"
-    
-    return html_output
-
-def select_invalid_data_type(df, column, data_type):
-    data_type = data_type.upper()
-
-    
-    def is_uuid(val):
-        try:
-            uuid.UUID(str(val))
-            return True
-        except ValueError:
-            return False
-    
-    if data_type == 'NULL':
-        mask = ~df[column].isnull()
-    elif data_type in ['INTEGER', 'SMALLINT', 'TINYINT', 'BIGINT', 'HUGEINT']:
-        numeric_mask = pd.to_numeric(df[column], errors='coerce').notnull()
-        integer_mask = df[column].astype(str).str.isdigit()
-        mask = ~(numeric_mask & integer_mask)
-    elif data_type in ['DOUBLE', 'REAL', 'DECIMAL']:
-        numeric_mask = pd.to_numeric(df[column], errors='coerce').notnull()
-        null_mask = df[column].isnull()
-        mask = ~(numeric_mask | null_mask)
-    elif data_type == 'BOOLEAN':
-        mask = ~df[column].isin([True, False, 1, 0, 'True', 'False', 'true', 'false'])
-    elif data_type in data_types['VARCHAR']:
-        mask = df[column].astype(str).isnull()
-    elif data_type == 'DATE':
-        mask = ~df[column].apply(lambda x: isinstance(x, (datetime.date, datetime.datetime, datetime.time)))
-    elif data_type in ['TIME', 'TIMESTAMP', 'TIMESTAMP WITH TIME ZONE']:
-        mask = ~df[column].apply(lambda x: isinstance(x, (datetime.date, datetime.datetime, datetime.time)))
-    elif data_type == 'BLOB':
-        mask = df[column].apply(lambda x: not isinstance(x, (bytes, bytearray)))
-    elif data_type == 'UUID':
-        mask = ~df[column].apply(is_uuid)
-    else:
-        raise ValueError(f"Data type {data_type} is not supported.")
-
-    return mask
-
-
-
-
-
-def identify_longitude_latitude(source_table_description):
-
-    template = f"""Below are summary of the table. The attributes are highlighted in **bold**.
-Table: {source_table_description}.
-
-Task: Identify the pairs of longitude/latitude attribute names.
-Respond in JSON format:
-```json
-[  
-{{
-    "longitude_name": "attribute_1" (case sensitive),
-    "latitude_name": "attribute_2
-}},
-...
-]
-```"""
-
-    messages = [{"role": "user", "content": template}]
-
-    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-
-    summary = response['choices'][0]['message']['content']
-    assistant_message = response['choices'][0]['message']
-    messages.append(assistant_message)
-
-    for message in messages:
-            write_log(message['content'])
-            write_log("---------------------")
-
-
-    json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
-    json_code = replace_newline(json_code)
-    json_code = json.loads(json_code)
-
-    def verify_json_result(json_code):
-        if not isinstance(json_code, list):
-            raise ValueError("JSON code should be a list")
-
-        for item in json_code:
-            if not isinstance(item, dict):
-                raise ValueError("Each item in the list should be a dictionary")
-
-            required_keys = ["longitude_name", "latitude_name"]
-            for key in required_keys:
-                if key not in item:
-                    raise ValueError(f"Key '{key}' is missing in one of the items")
-
-                if not isinstance(item[key], str):
-                    raise ValueError(f"Value for '{key}' should be a string")
-
-    verify_json_result(json_code)
-    return json_code
-
-
-def display_longitude_latitude(json_code, full_list, call_back):
-    print(f"🤓 We have identified attributes for longitude/latitude. Please select one:")
-
-    radio_options = [f"Longitude: \"{pair['longitude_name']}\", Latitude: \"{pair['latitude_name']}\"" for pair in json_code]
-
-    if len(radio_options) == 0:
-        print(f"🙁 There doesn't seem to be a pair of attributes for longitude/latitude")
-        print(f"🤓 You can try to first extract these attributes")
-        print(f"😊 GeoEncoding is under development. Please send a feature request! ")
-
-
-    radio_options.append('Manual Selection:')
-
-
-    selection_radio_buttons = widgets.RadioButtons(
-        options=radio_options,
-        disabled=False,
-        layout=widgets.Layout(width='600px')
-    )
-
-    longitude_label = widgets.HTML(value='<strong>Longitude:</strong>')
-    latitude_label = widgets.HTML(value='<strong>Latitude:</strong>')
-
-
-    custom_longitude_dropdown = widgets.Dropdown(
-        options=full_list,
-        layout=widgets.Layout(width='15%')
-    )
-    custom_latitude_dropdown = widgets.Dropdown(
-        options=full_list,
-        layout=widgets.Layout(width='15%')
-    )
-
-    hbox_longitude = widgets.HBox([longitude_label, custom_longitude_dropdown,latitude_label, custom_latitude_dropdown])
-
-    submit_button = widgets.Button(description="Submit")
-
-    def on_submit_button_clicked(b):
-        
-        clear_output(wait=True)
-        
-        selected_index = selection_radio_buttons.index
-        if selected_index < len(json_code):
-            selected_pair = json_code[selected_index]
-            call_back(selected_pair['longitude_name'], selected_pair['latitude_name'])
-        else:  
-            call_back(custom_longitude_dropdown.value, custom_latitude_dropdown.value)
-
-    submit_button.on_click(on_submit_button_clicked)
-
-    display(selection_radio_buttons, hbox_longitude, submit_button)
-
-    def on_selection_change(change):
-        if change['new'] == 'Manual Selection:':
-            hbox_longitude.layout.display = 'flex'
-        else:
-            hbox_longitude.layout.display = 'none'
-
-    selection_radio_buttons.observe(on_selection_change, names='value')
-    on_selection_change({'new': selection_radio_buttons.value})
-
-
-
-
-
-
-def recommend_testing(basic_description, table_name):
-    template = f"""{basic_description}
-Propose domain specific testing for table columns.
-E.g., If the table has "volume 1", "volume 2" and "total volume", then the domain specific testing should be "volume 1 + volume 2 = total volume".
-If the table has "start date" and "end date", then the domain specific testing should be "start date < end date" when these columns are not null.
-Don't write tests that checks the column range/domains, as they are already given.
-
-Now respond in the following format:
-```json
-[
-{{
-    "name": "Total Volume Check",
-    "reasoning": "The total volume should be the sum of volume 1 and volume 2",
-    "sql" (select rows that violate the rule, to be executed by duckdb): "select * from {table_name} where volume_1 + volume_2 != total_volume",
-}},
-...
-]
-```"""
-
-    messages = [{"role": "user", "content": template}]
-    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-
-    write_log(template)
-    write_log("-----------------------------------")
-    write_log(response['choices'][0]['message']['content'])
-
-    processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
-    json_code = json.loads(processed_string)
-
-    def test_json_code(code):
-        if not isinstance(code, list):
-            raise ValueError("The provided JSON is not a list.")
-
-        required_keys = {"name", "reasoning", "sql"}
-        for item in code:
-            if not isinstance(item, dict):
-                raise ValueError("An item in the list is not a dictionary.")
-
-            if not required_keys.issubset(item.keys()):
-                missing_keys = required_keys - item.keys()
-                raise ValueError(f"Missing keys in an item: {missing_keys}")
-
-    test_json_code(json_code)
-    return json_code
-
-
-
-def recommend_join_keys(source_table_description, target_table_description):
-    template = f"""Below are summary of tables. The attributes are highlighted in **bold**.
-Table 1: {source_table_description}.
-
-Table 2 : {target_table_description}.
-
-Task: Recommend a list of join keys between the two tables.
-Respond in JSON format:
-```json
-[  
-{{
-    "reason": "Both tables contain the same concept of ...",
-    "table_1_join_keys": [attribute_1, attribute_2, ...] (case sensitive),
-    "table_2_join_keys": [...]
-}},
-...
-]
-```"""
-
-    messages = [{"role": "user", "content": template}]
-
-    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-
-    summary = response['choices'][0]['message']['content']
-    assistant_message = response['choices'][0]['message']
-    messages.append(assistant_message)
-
-    for message in messages:
-            write_log(message['content'])
-            write_log("---------------------")
-
-
-    json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
-    json_code = replace_newline(json_code)
-    json_code = json.loads(json_code)
-
-    def verify_json_result(json_code):
-        if not isinstance(json_code, list):
-            raise ValueError("JSON code should be a list")
-
-        for item in json_code:
-            if not isinstance(item, dict):
-                raise ValueError("Each item in the list should be a dictionary")
-
-            required_keys = ["reason", "table_1_join_keys", "table_2_join_keys"]
-            for key in required_keys:
-                if key not in item:
-                    raise ValueError(f"Key '{key}' is missing in one of the items")
-
-            if not isinstance(item["table_1_join_keys"], list) or not isinstance(item["table_2_join_keys"], list):
-                raise ValueError("table_1_join_keys and table_2_join_keys should be lists")
-
-    verify_json_result(json_code)
-    return json_code
-
-
-def find_duplicate_indices(df):
-    if not isinstance(df, pd.DataFrame):
-        raise ValueError("Input must be a pandas DataFrame")
-
-    df_temp = df.fillna("NaN_placeholder")
-
-    duplicates = df_temp[df_temp.duplicated(keep=False)]
-
-    if duplicates.empty:
-        return []
-
-    grouped = duplicates.groupby(list(duplicates.columns)).apply(lambda x: x.index.tolist())
-
-    return grouped.values.tolist()
-
-
-
-
-def display_duplicated_rows_html(df, duplicated_indices):
-    html_output = f"<p>🤨 There are {len(duplicated_indices)} groups of duplicated rows.</p>"
-    for i, group in enumerate(duplicated_indices[:5]):
-        html_output += f"Group {i+1} appear {len(group)} times:"
-        for idx in group[:1]:
-            html_output += df.iloc[[idx]].to_html()
-    if len(duplicated_indices) > 5:
-        html_output += "<p>...</p>"
-    html_output += "<p>🧐 Do you want to remove the duplicated rows?</p>"
-    display(HTML(html_output))
-
-
-
-
-def color_columns(df, color, column_indices):
-    return color_columns_multiple(df, [color], [column_indices])
-
-
-
-def columns_with_all_missing_values(df):
-    if not isinstance(df, pd.DataFrame):
-        raise ValueError("Input must be a pandas DataFrame")
-
-    missing_column_indices = [i for i, col in enumerate(df.columns) if df.iloc[:, i].isna().all()]
-
-    return missing_column_indices
-
-def display_and_ask_removal(df, missing_column_indices):
-    html_output = f"<p>🤔 There are {len(missing_column_indices)} columns <b>with all missing values</b>:</p>"
-    display(HTML(html_output))
-
-    df_sample = color_columns(df.head(), 'lightgreen', missing_column_indices)
-    display(HTML(wrap_in_scrollable_div(truncate_html_td(df_sample.to_html()))))
-    display(HTML(f"<p>🧐 Select the columns you want to remove:</p>"))
-
-
-
-def display_duplicated_columns_html(df, duplicate_column_indices):
-    html_output = f"<p>🤔 There are {len(duplicate_column_indices)} groups of duplicated column names.</p>"
-
-
-    for group in duplicate_column_indices:
-
-        col_name = df.columns[group[0]]
-        
-        new_column_names = df.columns.tolist()
-
-        for i, idx in enumerate(group):
-            new_column_names[idx] = f"{df.columns[idx]} ({i+1})"
-        
-        df.columns = new_column_names
-
-    colors = generate_seaborn_palette(len(duplicate_column_indices))
-
-    styled_df = color_columns_multiple(df.head(), colors, duplicate_column_indices)
-
-    display(HTML(html_output))
-    display(HTML(wrap_in_scrollable_div(truncate_html_td(styled_df.to_html()))))
-
-    display(HTML(f"<p>🧐 Select the columns you want to remove:</p>"))
-
-
-def find_duplicate_column_indices(df):
-    if not isinstance(df, pd.DataFrame):
-        raise ValueError("Input must be a pandas DataFrame")
-
-    columns_dict = {}
-    for index, col in enumerate(df.columns):
-        columns_dict.setdefault(col, []).append(index)
-
-    duplicate_columns = [indices for indices in columns_dict.values() if len(indices) > 1]
-
-    return duplicate_columns
-
-
-
-
-def find_default_index_column(df):
-    if not isinstance(df, pd.DataFrame):
-        raise ValueError("Input must be a pandas DataFrame")
-
-    sample_df = df[:1000].copy()
-
-    default_index_indices = []
-
-    for col in sample_df.columns:
-        if sample_df[col].equals(pd.Series(range(len(sample_df)))):
-            default_index_indices.append(df.columns.get_loc(col))
-
-    return default_index_indices
-
-
-
-
-
-
-def find_columns_with_xy_suffix_indices(df):
-    if not isinstance(df, pd.DataFrame):
-        raise ValueError("Input must be a pandas DataFrame")
-
-    base_names = set(df.columns.str.replace('(_x$|_y$|\.x$|\.y$)', '', regex=True))
-
-    matched_column_indices = []
-
-    for base in base_names:
-        if f'{base}_x' in df.columns and f'{base}_y' in df.columns:
-            index_x = df.columns.get_loc(f'{base}_x')
-            index_y = df.columns.get_loc(f'{base}_y')
-            matched_column_indices.append([index_x, index_y])
-
-        if f'{base}.x' in df.columns and f'{base}.y' in df.columns:
-            index_x_dot = df.columns.get_loc(f'{base}.x')
-            index_y_dot = df.columns.get_loc(f'{base}.y')
-            matched_column_indices.append([index_x_dot, index_y_dot])
-
-    return matched_column_indices
-
-
-def display_xy_duplicated_columns_html(df, duplicate_column_indices):
-    html_output = f"<p>🤔 There are {len(duplicate_column_indices)} groups of column names, duplicated likely by merge.</p>"
-
-
-    for group in duplicate_column_indices:
-
-        col_name = df.columns[group[0]]
-        
-        new_column_names = df.columns.tolist()
-
-        for i, idx in enumerate(group):
-            new_column_names[idx] = f"{df.columns[idx]}"
-        
-        df.columns = new_column_names
-
-    colors = generate_seaborn_palette(len(duplicate_column_indices))
-
-    styled_df = color_columns_multiple(df.head(), colors, duplicate_column_indices)
-
-    display(HTML(html_output))
-    display(HTML(wrap_in_scrollable_div(truncate_html_td(styled_df.to_html()))))
-
-    display(HTML(f"<p>🧐 Select the columns you want to remove:</p>"))
-
-
-
-
-def find_default_index_column(df):
-    if not isinstance(df, pd.DataFrame):
-        raise ValueError("Input must be a pandas DataFrame")
-
-    sample_df = df[:1000].copy()
-
-    default_index_indices = []
-
-    for col in sample_df.columns:
-        if sample_df[col].equals(pd.Series(range(len(sample_df)))):
-            default_index_indices.append(df.columns.get_loc(col))
-
-    return default_index_indices
-
-    
-def display_index_and_ask_removal(df, missing_column_indices):
-    html_output = f"<p>🤔 There are {len(missing_column_indices)} columns <b>for row id</b>:</p>"
-
-    df_sample = color_columns(df.head(), 'lightgreen', missing_column_indices)
-
-    display(HTML(html_output))
-    display(HTML(wrap_in_scrollable_div(truncate_html_td(df_sample.to_html()))))
-
-    display(HTML(f"<p>🧐 Select the columns you want to remove:</p>"))
-
 
 
 
@@ -1657,119 +1033,6 @@ Return the results in json format:
 
 
 
-
-
-
-def generate_workflow_html(nodes, edges, edge_labels=None, highlight_nodes=None, highlight_edges=None, height=400):
-    dot = Digraph(format='png')
-
-    if edge_labels is None:
-        edge_labels = {}
-    if highlight_nodes is None:
-        highlight_nodes = []
-    if highlight_edges is None:
-        highlight_edges = []
-
-    node_style = {
-        'style': 'filled',
-        'fillcolor': '#DAE8FC',
-        'color': '#6C8EBF',
-        'shape': 'box',
-        'fontname': 'Helvetica',
-        'fontsize': '8',
-        'fontcolor': '#2E4057',
-        'margin': '0.1,0.02',
-        'height': '0.3',
-        'width': '0.5'
-    }
-
-    highlighted_node_style = {
-        'fillcolor': '#FFD580',
-        'color': '#FFA500'
-    }
-
-    edge_style = {
-        'color': '#6C8EBF',
-        'arrowsize': '0.5',
-        'penwidth': '0.6',
-        'fontname': 'Helvetica',
-        'fontsize': '8',
-        'fontcolor': '#2E4057',
-    }
-
-    highlighted_edge_style = {
-        'color': '#FFA500',
-        'penwidth': '2.0'
-    }
-
-    for node in nodes:
-        if node in highlight_nodes:
-            dot.node(node, node, **{**node_style, **highlighted_node_style})
-        else:
-            dot.node(node, node, **node_style)
-
-    for tail, heads in edges.items():
-        for head in heads:
-            label = edge_labels.get((tail, head), '')
-            if (tail, head) in highlight_edges:
-                dot.edge(nodes[tail], nodes[head], label=label, **{**edge_style, **highlighted_edge_style})
-            else:
-                dot.edge(nodes[tail], nodes[head], label=label, **edge_style)
-
-    png_image = dot.pipe()
-
-    encoded_image = base64.b64encode(png_image).decode()
-    return encoded_image
-
-def display_workflow(nodes, edges, edge_labels=None, highlight_nodes=None, highlight_edges=None, height=400):
-    encoded_image = generate_workflow_html(nodes, edges, edge_labels, highlight_nodes, highlight_edges, height)
-    scrollable_html = f"""
-    <div style="max-height: {height}px; overflow: auto; border: 1px solid #cccccc;">
-        <img src="data:image/png;base64,{encoded_image}" alt="Workflow Diagram" style="display: block; max-width: none; height: auto;">
-    </div>
-    """
-    display(HTML(scrollable_html))
-
-
-
-
-
-
-
-
-
-
-def plot_geospatial_data(df, longitude_col, latitude_col):
-
-    if len(df) > 10000:
-        df = df.sample(10000)
-
-    fig, ax = plt.subplots(figsize=(4, 2))
-
-    world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-
-    gdf = gpd.GeoDataFrame(
-        df, geometry=gpd.points_from_xy(df[longitude_col], df[latitude_col]))
-
-    world.plot(ax=ax, color='white', edgecolor='black', linewidth=0.5)
-
-    gdf.plot(ax=ax, color='forestgreen', marker='o', markersize=10, alpha=0.1)
-
-    ax.set_xlabel(longitude_col)
-    ax.set_ylabel(latitude_col)
-
-    ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
-
-    ax.set_aspect('equal')
-
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=300)
-    plt.close(fig)
-    buf.seek(0)
-
-    image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-    return image_base64
-
 def plot_distribution(df, column_name):
     """
     This function takes a pandas DataFrame and a column name as input.
@@ -1831,17 +1094,6 @@ def plot_distribution(df, column_name):
     return image_base64
 
 
-
-
-
-        
-            
-
-
-        
-
-
-
 def display_html_iframe(html_content, width="100%", height=None):
 
     encoded_html = base64.b64encode(html_content.encode()).decode()
@@ -1849,43 +1101,6 @@ def display_html_iframe(html_content, width="100%", height=None):
     data_uri = f"data:text/html;base64,{encoded_html}"
     
     display(IFrame(src=data_uri, width=width, height=height))
-
-def render_json_in_iframe_with_max_height(json_data, max_height=200):
-    def default_serializer(obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
-
-    try:
-        json_str = json.dumps(json_data, default=default_serializer, indent=2)
-    except Exception as e:
-        json_str = f"Error: {str(e)}"
-     
-        
-    html_template = f"""
-    <html>
-    <head>
-        <script src="https://rawgit.com/caldwell/renderjson/master/renderjson.js"></script>
-        <script>
-            window.onload = function() {{
-                document.body.appendChild(renderjson.set_show_to_level(1)({json_str}));
-            }};
-        </script>
-    </head>
-    <body style="margin:0; padding:0;"></body>
-    </html>
-    """
-    
-    encoded_html = base64.b64encode(html_template.encode('utf-8')).decode('utf-8')
-    
-    iframe_html = f'''
-    <div style="overflow-y:auto; border-left: 4px solid #ccc; padding-left: 10px;">
-        <iframe src="data:text/html;base64,{encoded_html}" style="width:100%; height:{max_height}px; border:none;"></iframe>
-    </div>
-    '''
-
-    return iframe_html    
-
 
 
 def collect_df_statistics_(df, document=None, sample_distinct=20):
@@ -2294,97 +1509,6 @@ def process_dataframe(df, instruction_name, **kwargs):
         else:
             raise Exception("Unknown action")
 
-
-def dijkstra(graph, start):
-    distances = {node: float('infinity') for node in graph}
-    distances[start] = 0
-    visited = set()
-
-    priority_queue = [(0, start)]
-
-    while priority_queue:
-        current_distance, current_node = heapq.heappop(priority_queue)
-
-        if current_node in visited:
-            continue
-
-        visited.add(current_node)
-
-        for neighbor, weight in graph[current_node].items():
-            distance = current_distance + weight
-
-            if distance < distances[neighbor]:
-                distances[neighbor] = distance
-                heapq.heappush(priority_queue, (distance, neighbor))
-
-    return distances
-
-def prim(graph):
-    min_spanning_tree = []
-    visited = set()
-
-    start_node = next(iter(graph))
-    visited.add(start_node)
-
-    edge_heap = [(weight, start_node, neighbor) for neighbor, weight in graph[start_node].items()]
-    heapq.heapify(edge_heap)
-
-    while edge_heap:
-        weight, current_node, neighbor = heapq.heappop(edge_heap)
-
-        if neighbor in visited:
-            continue
-
-        min_spanning_tree.append((current_node, neighbor, weight))
-
-        visited.add(neighbor)
-
-        for next_neighbor, next_weight in graph[neighbor].items():
-            if next_neighbor not in visited:
-                heapq.heappush(edge_heap, (next_weight, neighbor, next_neighbor))
-
-    return min_spanning_tree
-
-def build_kmp_table(pattern):
-    m = len(pattern)
-    kmp_table = [0] * m
-    j = 0
-
-    for i in range(1, m):
-        while j > 0 and pattern[i] != pattern[j]:
-            j = kmp_table[j - 1]
-
-        if pattern[i] == pattern[j]:
-            j += 1
-
-        kmp_table[i] = j
-
-    return kmp_table
-
-def kmp_search(text, pattern):
-    n = len(text)
-    m = len(pattern)
-    kmp_table = build_kmp_table(pattern)
-    matches = []
-
-    i, j = 0, 0
-    while i < n:
-        if pattern[j] == text[i]:
-            i += 1
-            j += 1
-
-            if j == m:
-                matches.append(i - j)
-                j = kmp_table[j - 1]
-        else:
-            if j != 0:
-                j = kmp_table[j - 1]
-            else:
-                i += 1
-
-    return matches
-
-
 def read_csv_with_common_encodings(file_path, sep = ","):
     common_encodings = ['utf-8', 'ISO-8859-1', 'cp1252', 'latin1', 'ascii', 'utf-16']
 
@@ -2422,2796 +1546,6 @@ def detect_separator(filename, potential_separators=[',', '\t', ';', '|', ' '], 
     return likely_separator if separator_scores[likely_separator] > 0 else None
 
 
-def read_csv_file_advanced(file_path, default_sep=',', default_encoding='utf-8'):
-
-    try:
-        df = pd.read_csv(file_path, sep=default_sep, encoding=default_encoding)
-        return default_sep, default_encoding, df
-
-    except pd.errors.ParserError:
-        sep = detect_separator(file_path)
-        try:
-            df = pd.read_csv(file_path, sep=sep, encoding=default_encoding)
-            return sep, default_encoding, df
-        except UnicodeDecodeError:
-            encoding, df = read_csv_with_common_encodings(file_path, sep)
-            return sep, encoding, df
-
-    except UnicodeDecodeError:
-        sep = default_sep
-        encoding, df = read_csv_with_common_encodings(file_path, sep)
-        return sep, encoding, df
-
-def read_data(data, document_path=None, viewer=None):
-
-    if isinstance(data, gpd.GeoDataFrame):
-        document_data = ShapeData(gdf=data)
-        return document_data
-
-    if isinstance(data, pd.DataFrame):
-        document_data = DocumentedData(df=data)
-        if document_path is not None:
-            document_data.read_document_from_disk(document_path, viewer = viewer)
-        else:
-            document_data.start(viewer = viewer)
-        return document_data
-    
-    
-    if isinstance(data, str) and data.endswith('.csv'):
-        document_data = DocumentedData(file_path=data)
-        if document_path is not None:
-            document_data.read_document_from_disk(document_path, viewer = viewer)
-        else:
-            document_data.start(viewer = viewer)
-        return document_data
-
-    if isinstance(data, str) and data.endswith('.tif'):
-        document_data = ShapeData(raster_path=data)
-        return document_data
-
-    if isinstance(data, str) and (data.endswith('.xlsx') or data.endswith('.xls')):
-        xlsx = pd.ExcelFile(data)
-
-        sheet_names = xlsx.sheet_names
-
-        if len(sheet_names) > 1:
-            print(f"⚠️ Excel file {data} has more than 1 sheet. Please select one:")
-
-            def display_sheet(sheet_name):
-                print(f"Selected sheet: {sheet_name}")
-
-            sheet_dropdown = widgets.Dropdown(
-                options=sheet_names,
-                description='Sheet:',
-                disabled=False,
-            )
-
-            document_data = DocumentedData(dummy=True)
-
-            button = widgets.Button(description="Next")
-
-            def on_button_clicked(b):
-                clear_output(wait=True)
-                sheet_name = sheet_dropdown.value
-
-                print("Selected sheet: " + sheet_name)
-                print("Reading the sheet... Please wait...")
-
-                document_data.__init__(file_path=data, sheet_name=sheet_name)
-                if document_path is not None:
-                    document_data.read_document_from_disk(document_path, viewer = viewer)
-                else:
-                    document_data.start()
-                return document_data
-                
-            button.on_click(on_button_clicked)
-
-            display(sheet_dropdown, button)
-
-            return document_data
-
-        else:
-            sheet_name = sheet_names[0]
-            document_data = DocumentedData(file_path=data, sheet_name=sheet_name)
-            if document_path is not None:
-                document_data.read_document_from_disk(document_path, viewer = viewer)
-            else:
-                document_data.start()
-            return document_data
-
-    
-
-
-class DocumentedData:
-    def __init__(self, file_path=None, df=None, table_name = None,
-                 log_file_path='data_log.txt', display_html=True,
-                 sheet_name=None, dummy=False):
-
-        if dummy:
-            return
-
-        if file_path is not None and isinstance(file_path, pd.DataFrame):
-            df = file_path
-            file_path = None
-
-        if file_path is not None:
-
-            if file_path.endswith('.csv'):
-            
-                sep, encoding, df = read_csv_file_advanced(file_path)
-
-                self.sep = sep
-                self.encoding = encoding
-                self.file_path = file_path
-
-                if table_name is None:
-                    self.table_name = os.path.basename(file_path).split('.')[0]
-                else:
-                    self.table_name = table_name
-                self.original_df = lightweight_copy(df)
-                self.df = df
-            
-            elif file_path.endswith('.xlsx') or file_path.endswith('.xls'):
-                xlsx = pd.ExcelFile(file_path)
-
-                sheet_names = xlsx.sheet_names
-
-                if len(sheet_names) > 1 and sheet_name is None:
-
-                    raise ValueError(f"Excel file {file_path} has more than 1 sheet. Please pass in the sheet_name from {sheet_names}.")
-
-
-                if sheet_name is not None and sheet_name not in sheet_names:
-                    raise ValueError(f"Sheet name {sheet_name} is not in the sheet names {sheet_names}.")
-
-                if sheet_name is None and len(sheet_names) == 1:
-                    sheet_name = sheet_names[0]
-
-                self.file_path = file_path
-                self.sheet_name = sheet_name
-
-                if table_name is None:
-                    self.table_name = os.path.basename(file_path).split('.')[0]
-                else:
-                    self.table_name = table_name
-                
-                self.table_name += f"-{sheet_name}"
-
-                df = pd.read_excel(file_path, sheet_name=sheet_name)
-                self.original_df = lightweight_copy(df)
-                self.df = df
-
-            else:
-                raise ValueError(f"Only csv and excel files are supported. {file_path} is not supported.")
-
-        elif df is not None:
-            if not isinstance(df, pd.DataFrame):
-                raise ValueError("Input must be a pandas DataFrame.")
-            
-            self.table_name = table_name
-            self.original_df = df.copy()
-            self.df = df
-        
-        else:
-            raise ValueError("Either path or df must be provided.")
-
-        self.document = {}
-        self.stats = collect_df_statistics(self)
-
-        idx = 1
-        column_desc = ""
-        for col in df.columns:
-            column_desc += f"{idx}. " + describe_column(self.stats, col) + "\n"
-            idx += 1
-
-        self.column_description = column_desc
-
-        self.log_file_path = log_file_path
-
-        self.display_html = display_html
-        self.viewer = None
-
-        source = SourceStep(self)
-        
-        self.pipeline = TransformationPipeline(steps = [source], edges=[])
-
-        self.rename_step_finished = False
-        self.drop_duplicated_row_step_finished = False
-        self.drop_duplicated_colulmn_step_finished = False
-        self.drop_all_missing_columns_step_finished = False
-        self.drop_x_y_columns_step_finished = False
-        self.drop_index_column_step_finished = False
-        self.project_step_finished = False
-        self.remove_data_type_step_finished = False
-
-        self.rename_table = True
-
-    def get_summary(self):
-        return self.document["table_summary"]["summary"]
-
-    def transform(self):
-        if not hasattr(self, 'cleaner'):
-            self.cleaner = DataCleaning(self)
-        self.cleaner.display()
-    
-    def get_cleaner(self):
-        if not hasattr(self, 'cleaner'):
-            self.cleaner = GeoDataCleaning(self)
-        return self.cleaner
-
-    def get_df(self):
-        if hasattr(self, 'cleaner'):
-            return self.cleaner.run_codes()
-        
-        return self.pipeline.run_codes()
-
-    def describe_missing_values(self,threshold=50):
-        description = ""
-        first = True
-        for col_name in self.df.columns:
-            if self.stats[col_name]['null_percentage'] > threshold:
-                if first:
-                    description += "Percentage of missing values:\n"
-                    first = False
-                description +=  f"{col_name}: {self.stats[col_name]['null_percentage']}%\n"
-        if first:
-            description += "None of the columns have missing values."
-        return description
-
-    def complete(self):
-        clear_output(wait=True)
-        print(f"""Congratulation! The document is complete. 🎉
-
-{BOLD}What's next?{END}
-1. Use Cleaner ✨ to clean the data.
-2. Use Standardizer 📏 to standardize the data.
-3. Use Transformer 🔌 to transform the data.      
-...
-
-And more to come! 🚀""")
-        self.save_file()
-
-    def write_log(self, message: str):
-        self.log_file = open(self.log_file_path, 'a')
-        self.log_file.write(message + '\n')
-        self.log_file.close()
-
-    def start(self, viewer=None):
-        self.viewer = viewer
-        self.check_document_exists()
-
-    def check_document_exists(self):
-
-        next_step = self.start_document
-
-        if self.table_name is not None:
-            data_name = self.table_name
-
-            file_name = f"{data_name}_cocoon_data.json".replace(" ", "_")
-
-            if file_exists(file_name):
-                print(f"🤔 There is a document file ./{file_name} Do you want to load it?")
-
-
-                yes_button = widgets.Button(description="Yes")
-                no_button = widgets.Button(description="No")
-
-                def on_yes(b):
-                    clear_output(wait=True)
-                    self.read_document_from_disk(file_name, viewer = None)
-
-                def on_no(b):
-                    clear_output(wait=True)
-                    next_step()
-
-                yes_button.on_click(on_yes)
-                no_button.on_click(on_no)
-
-                display(HBox([yes_button, no_button]))
-
-                if self.viewer:
-                    on_yes(yes_button)
-
-            
-            else:
-                next_step()
-
-        else:
-            next_step()
-
-    
-
-
-    def start_document(self, viewer=None):
-        next_step = self.decide_project
-        
-        if viewer is not None:
-            self.viewer = viewer
-        
-        if self.viewer is  None:
-            mode_selector = widgets.RadioButtons(
-                options=[
-                    ('Table Viewer 👀: I’m not familiar with the table. Please provide your best guess.', 'Table Viewer'),
-                    ('Table Provider 🧐: I am ready to provide detailed information about the table.', 'Table Provider')
-                ],
-                description='Documentation Mode:',
-                layout={'width': 'max-content'},
-                style={'description_width': 'initial'}
-            )
-
-
-            submit_button = widgets.Button(description="Submit")
-
-            def on_submit(b):
-                selected_mode = mode_selector.value
-                if selected_mode == 'Table Viewer':
-                    self.viewer = True
-                else:
-                    self.viewer = False
-
-                clear_output(wait=True)
-
-                if selected_mode == 'Table Viewer':
-                    print("We got it. Sit back and grab a coffee. It will be done in 10-20 minutes. ☕")
-                next_step()
-
-
-            submit_button.on_click(on_submit)
-
-            display(mode_selector, submit_button)
-
-        else:
-            next_step()
-
-    def save_as_html(self, file_path=None):
-        if file_path is None:
-            if self.table_name is not None:
-                data_name = self.table_name
-            else:
-                data_name = self.document['main_entity']['summary']
-            file_path = f"{data_name}_cocoon_doc.html".replace(" ", "_")
-
-        html_content = self.generate_html()
-        with open(file_path, 'w') as file:
-            file.write(html_content)
-
-    def generate_visualizations_html(self):
-
-        json_var = self.document["visualization"]["summary"] 
-
-        histogram_imgs, map_imgs = image_json_to_base64(json_var, self.df)
-
-        html = "" 
-
-        for img in histogram_imgs:
-            if img is not None:
-                html += f"""<img src="data:image/png;base64,{img}" width="300" height="150">"""
-
-        html += "<br>"
-
-        for img in map_imgs:
-            if img is not None:
-                html += f"""<img src="data:image/png;base64,{img}" width="400" height="200">"""
-
-        return html
-
-    def generate_html(self):
-        middle_html = self.generate_html_source()
-        full_html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <title>Cocoon Documentation</title>
-    <style>
-    /* CSS for the overall appearance: fonts, spacing, etc. */
-    body {{
-        font-family: "Arial";
-        margin: 40px;
-        background-color: #d9ead3;  /* Matching the light green background of the icon */
-    }}
-
-    .container {{
-        max-width: 900px;  /* Setting a maximum width for the content */
-        margin: 0 auto;   /* Centering the container */
-        background-color: #ffffff; /* White background for the main content */
-        padding: 20px;
-        border-radius: 5px; /* Rounded corners */
-        box-shadow: 0 0 10px rgba(0,0,0,0.1); /* A subtle shadow to lift the container */
-    }}
-
-    h1 {{
-        font-size: 24px;
-        color: #274e13; /* Dark green color matching the icon */
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }}
-
-    h2 {{
-        font-size: 20px;
-        margin-top: 20px;
-        margin-bottom: 15px;
-    }}
-
-    ul, ol {{
-        padding-left: 20px;
-    }}
-
-    li {{
-        margin-bottom: 10px;    }}
-
-    p {{        margin-bottom: 20px;
-        text-align: justify; /* To align the text on both sides */
-    }}
-
-    /* CSS specific to the table elements */
-    table {{
-        font-family: Arial, sans-serif;
-        border-collapse: collapse; /* Ensures there are no double borders */
-        width: 100%;
-        table-layout: auto;
-    }}
-
-    th, td {{
-        border: 1px solid #dddddd; /* Light grey borders */
-        text-align: left;
-        padding: 8px; /* Make text not touch the borders */
-    }}
-
-    th {{
-        background-color: #b6d7a8; /* Light green background matching the icon */
-    }}
-
-    tr:nth-child(even) {{
-        background-color: #d9ead3; /* Light green background matching the icon */
-    }}
-
-    tr:hover {{
-        background-color: #c9d9b3; /* A slightly darker green for hover effect */
-    }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        {middle_html}
-    </div>
-</body>
-</html>"""
-        return full_html
-
-    def generate_html_source(self):
-        html_content_updated = f'<div style="display: flex; align-items: center;">' \
-                    f'<img src="data:image/png;base64,{cocoon_icon_64}" alt="cocoon icon" width=50 style="margin-right: 10px;">' \
-                    f'<div style="margin: 0; padding: 0;">' \
-                    f'<h1 style="margin: 0; padding: 0;">Table Documentation</h1>' \
-                    f'<p style="margin: 0; padding: 0;">Powered by cocoon</p>' \
-                    f'</div>' \
-                    f'</div><hr>'
-
-        html_content_updated += '<h2>🤓 Table Sample (first 5 rows):</h2>'
-        html_content_updated += wrap_in_scrollable_div(self.df[:5].to_html(), width='800')
-        html_content_updated += '<hr>'
-
-        sanity_html = generate_html_for_sanity_check(self.document)
-        if sanity_html != "":
-            html_content_updated += f'<h2>🔍 Sanity Check</h2>'
-            html_content_updated += sanity_html
-
-
-        if "main_entity" in self.document and "column_grouping" in self.document:
-            main_entity = self.document['main_entity']['summary']
-            reason = self.document['table_summary']['summary']
-            reason = replace_asterisks_with_tags(reason)
-            html_content_updated += '<h2>📝 Table Summary:</h2>'
-            html_content_updated += f'<b>💡 The table is mainly about: </b>{main_entity}<br><br>'
-            html_content_updated += f'<b>Details</b>: {reason}<br>'
-            html_content_updated += '<br><b>🌳 Attribute Hierarchy</b><br>'
-
-            group_data = self.document['column_grouping']['summary']
-            tree_html, _, = get_tree_html(group_data) 
-            html_content_updated += wrap_in_iframe(tree_html)
-            html_content_updated += '<hr>'
-
-        if "visualization" in self.document:
-            html_content_updated += '<h2>📊 Visualizations</h2>'
-            html_content_updated += self.generate_visualizations_html()
-            html_content_updated += '<hr>'
-
-        if "missing_value" in self.document:
-            if any(self.df.isnull().mean() > 0):
-                html_content_updated += f'<h2>❓ Missing Values </h2>'
-                html_content_updated += plot_missing_values_html(self.df)
-                html_content_updated += '<br>'
-                html_content_updated += self.generate_missing_values_report()
-                html_content_updated += '<hr>'
-
-        if "unusual" in self.document:
-            exist_unusual = False
-
-            for key in self.document['unusual']:
-                value = self.document['unusual'][key]['summary']['Unusualness']
-                if value:
-                    exist_unusual = True
-                    break
-            
-            if exist_unusual:
-                html_content_updated +=f'<h2>🤔 Unusual Values </h2>'
-                html_content_updated += self.generate_unusual_values_report()
-                html_content_updated += '<hr>'
-
-        if "recommend_testing" in self.document:
-            html_content_updated += f'<h2>🧪 Testing</h2>'
-            json_code = self.document["recommend_testing"]
-            error_count = 0
-            table_name = self.get_table_name()
-
-            duckdb_conn = duckdb.connect()
-            duckdb_conn.register(table_name, self.df)
-
-            for test in json_code:
-                html_content_updated += "<h3>Test: " + test['name'] + "</h3>"
-                html_content_updated += "<p>" + test['reasoning'] + "</p>"
-                
-                highlighted_html = highlight(test['sql'], SqlLexer(), HtmlFormatter())
-                html_content_updated += highlighted_html
-
-                try:
-                    sql = sql_cleaner(test['sql'])
-                    result_df = duckdb_conn.execute(sql).df()
-                    if len(result_df) == 0:
-                        html_content_updated += "<span style='color: green;'>✅ The test passed.</span>"
-                    else:
-                        html_content_updated += "<span style='color: red;'>❌ The test failed. Below are the sample 4 rows that failed the test.</span>"
-                        html_content_updated += wrap_in_scrollable_div(truncate_html_td(result_df[:4].to_html()))
-                        error_count += 1
-
-                except Exception as e:
-                    html_content_updated += "<span style='color: red;'>❌ The test failed. Below is the error message.</span>"
-                    html_content_updated += "<p>" + str(e) + "</p>"
-                    error_count += 1
-
-                html_content_updated += "<hr>"
-
-        return html_content_updated
-
-    def display_document(self):
-        currnet_seq = 1
-
-        html_content_updated = f'<div style="display: flex; align-items: center;">' \
-                    f'<img src="data:image/png;base64,{cocoon_icon_64}" alt="cocoon icon" width=50 style="margin-right: 10px;">' \
-                    f'<div style="margin: 0; padding: 0;">' \
-                    f'<h1 style="margin: 0; padding: 0;">Table Documentation</h1>' \
-                    f'<p style="margin: 0; padding: 0;">Powered by cocoon</p>' \
-                    f'</div>' \
-                    f'</div><hr>'
-
-        html_content_updated += '<h2>🤓 Table Sample (first 5 rows):</h2>'
-        display(HTML(html_content_updated))
-        display(self.df.head())
-        display(HTML('<hr>'))
-        
-        tab_data = []
-
-
-        sanity_html = generate_html_for_sanity_check(self.document)
-        if sanity_html != "":
-            tab_data.append(("🔍 Sanity", 0, sanity_html))
-
-        if "main_entity" in self.document and "table_summary" in self.document and "column_grouping" in self.document:
-            main_entity = self.document['main_entity']['summary']
-            reason = self.document['table_summary']['summary']
-            reason = replace_asterisks_with_tags(reason)
-            html_content_updated = f'<b>💡 The table is mainly about: </b>{main_entity}<br><br>'
-            html_content_updated += f'<b>Details</b>: {reason}<br>'
-            html_content_updated += '<br><b>🌳 Attribute Hierarchy</b><br>'
-
-            group_data = self.document['column_grouping']['summary']
-            tree_html, _, = get_tree_html(group_data) 
-            html_content_updated += wrap_in_iframe(tree_html)
-
-            tab_data.append(("📝 Summary", 0, html_content_updated))
-
-        if "visualization" in self.document:
-            html_content_updated = self.generate_visualizations_html()
-            tab_data.append(("📊 Viz", 0, html_content_updated))
-
-        if "missing_value" in self.document:
-
-            num_cols_with_missing = sum(self.df.isnull().mean() > 0)
-
-            if num_cols_with_missing > 0:
-                html_content_updated = plot_missing_values_html(self.df)
-                html_content_updated += '<br>'
-                html_content_updated += self.generate_missing_values_report()
-
-                tab_data.append(("❓ Missing", num_cols_with_missing, html_content_updated))
-
-        if "unusual" in self.document:
-            number_of_unusual_columns = 0
-
-            for key in self.document['unusual']:
-                value = self.document['unusual'][key]['summary']['Unusualness']
-                if value:
-                    number_of_unusual_columns += 1
-            
-            if number_of_unusual_columns > 0:
-                html_content_updated = self.generate_unusual_values_report()
-                html_content_updated += '<hr>'
-                tab_data.append(("🤔 Unusual", number_of_unusual_columns, html_content_updated))
-        
-        if "recommend_testing" in self.document:
-            json_code = self.document["recommend_testing"]
-            html_output = ""
-            error_count = 0
-            table_name = self.get_table_name()
-
-            duckdb_conn = duckdb.connect()
-            duckdb_conn.register(table_name, self.df)
-
-            for test in json_code:
-                html_output += "<h3>Test: " + test['name'] + "</h3>"
-                html_output += "<p>" + test['reasoning'] + "</p>"
-                
-                highlighted_html = highlight(test['sql'], SqlLexer(), HtmlFormatter())
-                html_output += highlighted_html
-
-                try:
-                    sql = sql_cleaner(test['sql'])
-                    result_df = duckdb_conn.execute(sql).df()
-                    if len(result_df) == 0:
-                        html_output += "<span style='color: green;'>✅ The test passed.</span>"
-                    else:
-                        html_output += "<span style='color: red;'>❌ The test failed. Below are the sample 4 rows that failed the test.</span>"
-                        html_output += result_df[:4].to_html()
-                        error_count += 1
-
-                except Exception as e:
-                    html_output += "<span style='color: red;'>❌ The test failed. Below is the error message.</span>"
-                    html_output += "<p>" + str(e) + "</p>"
-                    error_count += 1
-
-                html_output += "<hr>"
-            
-            tab_data.append(("🧪 Test", error_count, html_output))
-
-
-        tabs = create_tabs_with_notifications(tab_data)
-        display(tabs)
-
-    def generate_html_missing_values_report(self):
-
-        html_output = self.generate_missing_values_report()
-
-        display(HTML(html_output))
-
-    def generate_missing_values_report(self):
-        html_output = "<b>Reasons for Missing Values 🤓</b> <br><ul>"
-        missing_values_dict = self.document['missing_value']
-        for column, details in missing_values_dict.items():
-            
-            if 'summary' in details:
-                html_output += f"<li><strong>{column}</strong>: "
-                html_output += str(details['summary'])
-                html_output += "</li>"
-
-        html_output += "</ul>"
-        return html_output
-
-    def generate_unusual_values_report(self):
-        unusual_values_dict = self.document['unusual']
-        html_output = ""
-        for column, details in unusual_values_dict.items():
-            
-            if details['summary']['Unusualness']:
-                html_output += f"<li><strong>{column}</strong>: "
-                html_output += str(details['summary']['Examples'])
-                html_output += f" <strong>Explanation</strong>: "
-                html_output += str(details['summary']['Explanation'])
-                html_output += "</li>"
-
-        html_output += "</ul>"
-        return html_output
-
-
-    def generate_html_unusual_values_report(self):
-        
-        html_output = self.generate_unusual_values_report()
-        display(HTML(html_output))
-
-    def plot_missing_values_compact(self):
-        """
-        This function takes a pandas DataFrame as input and plots a compact bar chart showing
-        the percentage of missing values for each column that has missing values.
-        """
-        df = self.df
-
-        missing_percent = df.isnull().mean() * 100
-
-        missing_percent = missing_percent[missing_percent > 0]
-        
-        if len(missing_percent) == 0:
-            return
-
-        plot_width = max(4, len(missing_percent) * 0.5)
-
-        sns.set(style="whitegrid")    
-
-        plt.figure(figsize=(plot_width, 3), dpi=100)
-        bar_plot = sns.barplot(x=missing_percent.index, y=missing_percent, color="lightgreen")
-
-        for index, value in enumerate(missing_percent):
-            bar_plot.text(index, value, f'{value:.2f}%', color='black', ha="center", fontsize=8)
-
-        plt.title('Missing Values %', fontsize=8)
-        plt.ylabel('%', fontsize=10)
-        plt.xticks(rotation=45, fontsize=6)
-        plt.yticks(fontsize=8)
-        plt.tight_layout()
-        plt.show()
-
-    def get_column_warnings(self, col):
-        warnings = []
-        if "consistency" in self.document:
-            if col in self.document["consistency"]:
-                summary = self.document["consistency"][col]["summary"]
-                if summary["Inconsitencies"] :
-                    warnings.append({"type": "Value Consistency", 
-                                    "explanation": "There are inconsistent values: " + summary["Examples"],
-                                    "solution": ["Proceed with the transformation as is",
-                                                "(not implemented) Clean the inconsistent values",]})
-        
-        if "missing_value" in self.document:
-            if col in self.document["missing_value"]:
-                if self.document["missing_value"][col]:
-                    warnings.append({"type": "Missing Value", 
-                                    "explanation": "There are missing values: " + self.document["missing_value"][col]["summary"][0],
-                                    "solution": ["Proceed with the transformation as is",
-                                                "Remove the rows with missing values",
-                                                "(not implemented) Clean the inconsistent values",]})    
-        
-        if "unusual" in self.document:
-            if col in self.document["unusual"]:
-                summary  = self.document["unusual"][col]["summary"]
-                if summary["Unusualness"]:
-                    warnings.append({"type": "Unusual Value",
-                                        "explanation": "There are unusual values: " + summary["Examples"],
-                                        "solution": ["Proceed with the transformation as is",
-                                                    "(not implemented) Clean the unusual values",]})
-
-        return warnings
-
-
-    def get_table_name(self):
-        if self.table_name is None:
-            return "table"
-        else:
-            if not self.table_name[0].isalpha() and self.table_name[0] != "_":
-                table_name = "_" + self.table_name
-            else:
-                table_name = self.table_name
-
-            return sanitize_table_name(table_name)
-    
-    def get_sample_text(self, sample_cols=None, sample_size=2, col_size=None):
-        if sample_cols is None:
-            sample_cols = self.df.columns
-        table_name = self.get_table_name()
-        return describe_df_in_natural_language(self.df[sample_cols], table_name, sample_size, num_cols_to_show=col_size)   
-
-    def get_basic_description(self, sample_size=2, cols = None, sample_cols=None):
-
-        if cols is None:
-            cols = self.df.columns
-
-        table_sample = self.get_sample_text(sample_cols=sample_cols, sample_size=sample_size)
-        
-        column_desc = ""
-
-        idx=1
-        for col in cols:
-            column_desc += f"{idx}. " + describe_column(self.stats, col) + "\n"
-            idx += 1
-
-        result = table_sample
-        if len(cols) > 0:
-            result += "\n\nColumn details:\n" + column_desc
-
-        return result
-
-    def show_progress(self, max_value):
-        progress = widgets.IntProgress(
-            value=1,
-            min=0,
-            max=max_value+1,  
-            step=1,
-            description='',
-            bar_style='',
-            orientation='horizontal'
-        )
-        
-        display(progress)
-        return progress
-
-    def display_tree(self, data):
-
-        if self.display_html:
-            html_content_updated, _, height = get_tree_html(data)
-
-            display_html_iframe(html_content_updated, height=f"{height}px")
-        else:
-
-            import plotly.graph_objects as go
-
-            def extract_hierarchy(data, parent_name='', hierarchy=None):
-                if hierarchy is None:
-                    hierarchy = {'names': [], 'parents': []}
-                
-                for name, children in data.items():
-                    hierarchy['names'].append(name)
-                    hierarchy['parents'].append(parent_name)
-                    if isinstance(children, dict):
-                        extract_hierarchy(children, parent_name=name, hierarchy=hierarchy)
-                    elif isinstance(children, list):
-                        for child in children:
-                            hierarchy['names'].append(child)
-                            hierarchy['parents'].append(name)
-                return hierarchy
-
-            hierarchy = extract_hierarchy(data)
-
-            ids = list(range(1, len(hierarchy['names']) + 1))
-            name_to_id = {name: id for id, name in zip(ids, hierarchy['names'])}
-            parent_ids = [name_to_id[parent] if parent in name_to_id else '' for parent in hierarchy['parents']]
-
-            fig = go.Figure(go.Treemap(
-                ids=ids,
-                labels=hierarchy['names'],
-                parents=parent_ids
-            ))
-
-            fig.update_layout(width=600, height=400, margin = dict(t=0, l=0, r=0, b=0))
-
-            fig.show()
-
-    def get_table_summary(self, overwrite=False, once=False):
-        next_step = self.get_column_grouping
-        if "table_summary" not in self.document:
-            self.document["table_summary"] = {}
-        else:
-            if self.document["table_summary"] and not overwrite:
-                write_log("Warning: table_summary already exists in the document.")
-                if not once:
-                    next_step()
-                return
-        print("📝 Generating table summary based on renamed attributes...")
-
-        progress = self.show_progress(1)
-
-        main_entity = self.document["main_entity"]["summary"]
-        table_sample = self.get_sample_text()
-
-        max_trials = 3
-
-        while max_trials > 0:
-            try:
-                summary, messages = get_table_summary(main_entity, table_sample)
-                progress.value += 1
-
-                for message in messages:
-                    write_log(message['content'])
-                    write_log("-----------------------------------")
-
-                table_columns = self.df.columns.to_list()
-
-
-
-                def extract_words_in_asterisks(text):
-                    import re
-
-                    pattern = r'\*\*(.*?)\*\*'
-
-                    matches = re.findall(pattern, text)
-
-                    return matches
-
-                def check_sets_equality(list1, list2):
-                    if not set(list1) == set(list2):
-                        raise ValueError(f"""The two lists do not have the same set of elements.
-                List 1: {sorted(list1)} 
-                List 2: {sorted(list2)}""")
-
-                def find_extra_columns(text_columns, table_columns):
-                    text_columns_set = set(text_columns)
-                    table_columns_set = set(table_columns)
-
-                    if text_columns_set.issuperset(table_columns_set):
-                        extra_columns = text_columns_set - table_columns_set
-                        return list(extra_columns)
-                    else:
-                        raise ValueError(f"text_columns is not a superset of table_columns. text_columns: {text_columns}, table_columns: {table_columns}")
-
-                def update_summary(summary, extra_columns):
-                    for column in extra_columns:
-                        summary = summary.replace(f"**{column}**", column)
-
-                    return summary
-
-                text_columns = extract_words_in_asterisks(summary)
-                extra_columns = find_extra_columns(text_columns, table_columns)
-
-                if len(extra_columns) > 0:
-                    updated_summary = update_summary(summary, extra_columns)
-                    write_log(f"Warning: The following columns are not in the table: {extra_columns}")
-                    write_log(f"Updated summary: {updated_summary}")
-                    write_log("-----------------------------------")
-                    summary = updated_summary
-
-                
-
-                break
-
-            except Exception as e:
-                write_log(f"Error: {e}")
-                write_log("-----------------------------------")
-                max_trials -= 1
-                if max_trials == 0:
-                    raise e
-                break
-                
-
-        self.document["table_summary"]["summary"] = summary
-        if LOG_MESSAGE_HISTORY:
-            self.document["table_summary"]["history"] = messages
-
-
-        html = f"<b>Table Summary</b><br>{replace_asterisks_with_tags(summary)}"
-        display(HTML(html))
-
-        def on_button_clicked(b):
-            clear_output(wait=True)
-            print("Submission received.")
-            next_step()
-
-        submit_button = widgets.Button(
-            description='Submit',
-            disabled=False,
-            button_style='',
-            tooltip='Click to submit',
-            icon='check'
-        )
-
-        submit_button.on_click(on_button_clicked)
-
-        display(submit_button)
-        
-        if self.viewer:
-            on_button_clicked(submit_button)
-
-
-    def get_visualization(self, overwrite=False, once=False):
-        next_step = self.check_missing_all
-        if "visualization" not in self.document:
-            self.document["visualization"] = {}
-        else:
-            if self.document["visualization"] and not overwrite:
-                write_log("Warning: visualization already exists in the document.")
-                if not once:
-                    next_step()
-                return
-        create_progress_bar_with_numbers(1, doc_steps)
-        print("📊 Generating visualization...")
-
-        progress = self.show_progress(1)
-
-        table_summary = self.document["table_summary"]["summary"]
-
-        max_trials = 3
-
-        while max_trials > 0:
-            try:
-                json_var, messages = generate_visualization_recommendation(table_summary)
-                
-                for message in messages:
-                    write_log(message['content'])
-                    write_log("-----------------------------------")
-
-                def verify_json(json_var, columns):
-                    to_remove_indices = []
-
-                    for index, item in enumerate(json_var):
-                        if item["name"] not in ["Histogram", "Map"]:
-                            to_remove_indices.append(index)
-                            continue
-
-                        if item["name"] == "Histogram":
-                            if item["params"] not in columns:
-                                to_remove_indices.append(index)
-                        elif item["name"] == "Map":
-                            if any(param not in columns for param in item["params"]):
-                                to_remove_indices.append(index)
-
-                    for index in reversed(to_remove_indices):
-                        del json_var[index]
-
-                    return json_var
-
-                json_var = verify_json(json_var, self.df.columns)
-
-                break
-            
-            except Exception as e:
-                write_log(f"Error: {e}")
-                write_log("-----------------------------------")
-                max_trials -= 1
-                if max_trials == 0:
-                    raise e
-                continue
-
-        progress.value += 1
-
-        self.document["visualization"]["summary"] = json_var
-        if LOG_MESSAGE_HISTORY:
-            self.document["visualization"]["history"] = messages
-
-        html = self.generate_visualizations_html()
-
-        display(HTML(html))
-
-        def on_button_clicked(b):
-            clear_output(wait=True)
-            print("Submission received.")
-            next_step()
-
-        submit_button = widgets.Button(
-            description='Submit',
-            disabled=False,
-            button_style='',
-            tooltip='Click to submit',
-            icon='check'
-        )
-
-        submit_button.on_click(on_button_clicked)
-
-        display(submit_button)
-
-        if self.viewer:
-            on_button_clicked(submit_button)
-
-
-    def get_column_grouping(self, overwrite=False, once=False):
-        next_step = self.get_visualization
-        if "column_grouping" not in self.document:
-            self.document["column_grouping"] = {}
-        else:
-            if self.document["column_grouping"] and not overwrite:
-                write_log("Warning: column_grouping already exists in the document.")
-                if not once:
-                    next_step()
-                return
-        create_progress_bar_with_numbers(1, doc_steps)
-        print("🌳 Building concept map...")
-
-        progress = self.show_progress(1)
-
-        meanings = self.document["column_meaning"]["summary"]
-
-        column_meanings = '\n'.join([f"- {m['column']}: {m['meaning']}" for m in meanings])
-
-        main_entity = self.document["main_entity"]["summary"]
-
-        sample = self.get_sample_text()
-
-
-
-
-
-        template = f"""{sample}
-
-{column_meanings}
-
-This table is about {main_entity}. The goal is to build a mind map. 
-
-Recursively group the attributes based on inherent entity association, not conceptual similarity.
-    E.g., for [student name, student grade, teacher grade], group by student and teacher, not by name.
-Avoid groups with too many/few subgroups. 
-
-Conclude with the final result as a multi-level JSON. Make sure all attributes are included.
-
-```json
-{{
-    "{main_entity}":
-        {{
-        "Sub group": {{
-        "sub-sub group": ["attribute1", "attribute2", ...],
-        }},
-    }}
-}}
-```"""
-        
-        def extract_attributes(json_var):
-            attributes = []
-            
-            def traverse(element):
-                if isinstance(element, dict):
-                    for value in element.values():
-                        traverse(value)
-                        
-                elif isinstance(element, list):
-                    for item in element:
-                        if isinstance(item, str):
-                            attributes.append(item)
-                        
-                        else:
-                            traverse(item)
-                            
-
-            traverse(json_var)
-            
-            return attributes
-
-        def validate_attributes(attributes, reference_attributes):
-            error_messages = []
-
-            seen_attributes = set()
-            duplicates = set()
-            for attribute in attributes:
-                if attribute in seen_attributes:
-                    duplicates.add(attribute)
-                seen_attributes.add(attribute)
-            
-            if duplicates:
-                error_messages.append("Duplicate attributes: " + ', '.join(duplicates))
-
-            attributes_set = set(attributes)
-            reference_set = set(reference_attributes)
-
-            extra_attributes = attributes_set - reference_set
-            if extra_attributes:
-                error_messages.append("Extra attributes: " + ', '.join(extra_attributes))
-
-            missing_attributes = reference_set - attributes_set
-            if missing_attributes:
-                error_messages.append("Missing attributes: " + ', '.join(missing_attributes) + "\n Are attributes in the leaf as an array [att1, att2]?")
-
-            return '\n'.join(error_messages)
-
-        
-
-        def build_concept_map_and_verify(messages):
-            
-            number_of_trials = 3
-
-            for messgae in messages:
-                write_log(messgae['content'])
-                write_log("-----------------------------------")
-
-            while number_of_trials > 0:
-                response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-                
-                write_log(response['choices'][0]['message']['content'])
-                write_log("-----------------------------------")
-
-                assistant_message = response['choices'][0]['message']
-                json_code = extract_json_code_safe(assistant_message['content'])
-                json_code = json_code.replace('\'', '\"')
-                json_var = json.loads(json_code)
-                attributes = extract_attributes(json_var)
-
-                messages.append(assistant_message)
-
-                error = validate_attributes(attributes, self.df.columns)
-
-                if error!= '':
-                    error_message = {
-                        "role": "user",
-                        "content": f"{error}\nPlease correct your answer and return the json in the required format."
-                    }
-                    messages.append(error_message)
-                    write_log(error_message['content'])
-                    write_log("-----------------------------------")
-
-                    number_of_trials -= 1
-
-                    if number_of_trials == 0:
-                        raise Exception(error)
-                
-                else:
-                    self.document["column_grouping"]["summary"] = json_var
-                    if LOG_MESSAGE_HISTORY:
-                        if "history" not in self.document["column_grouping"]:
-                            self.document["column_grouping"]["history"] = messages
-                        else:
-                            self.document["column_grouping"]["history"] += messages
-                    break
-
-
-        messages =[ {"role": "user", "content": template}]
-        build_concept_map_and_verify(messages)
-        data = self.document["column_grouping"]["summary"]
-        
-        
-
-        progress.value += 1
-        
-        clear_output(wait=True)
-        
-        self.display_tree(data)
-
-        def create_widgets_for_column_grouping():
-            def on_value_change(change):
-                if change['new'] == 'No':
-                    feedback_container.layout.display = ''
-                    text_area.disabled = False
-                else:
-                    feedback_container.layout.display = 'none'
-                    text_area.disabled = True
-
-            accuracy_question_label = widgets.Label(value='Is the mind map accurate?')
-
-            accuracy_check = widgets.RadioButtons(
-                options=['Yes', 'No'],
-                description='',
-                disabled=False
-            )
-
-            label = widgets.Label(value='If not accurate, how to fix it?')
-
-            text_area = widgets.Textarea(
-                value='',
-                placeholder='Type here',
-                description='',
-                disabled=True
-            )
-
-            feedback_container = widgets.VBox([label, text_area], layout=Layout(display='none'))
-
-            submit_button = widgets.Button(
-                description='Submit',
-                disabled=False,
-                button_style='',
-                tooltip='Click to submit',
-                icon='check'
-            )
-
-            accuracy_check.observe(on_value_change, names='value')
-
-            def on_button_clicked(b):
-                if accuracy_check.value == 'No':
-                    if text_area.value == '':
-                        print("\033[91mPlease enter the information\033[0m.")
-                        return
-                    feedback = text_area.value
-
-                    print("🌳 Refining concept map...")
-                    progress = self.show_progress(1)
-
-                    data = self.document["column_grouping"]["summary"]
-
-                    messages =[ {"role": "user", "content": template}]
-                    messages.append({"role": "system", "content": "```json\n"+str(data)+"\n```"})
-                    messages.append({"role": "user", 
-                                    "content": f"""{feedback} Please refine the json and return the result within ```json``` block."""})
-                    
-                    build_concept_map_and_verify(messages)
-                    clear_output(wait=True)
-                    data = self.document["column_grouping"]["summary"]
-                    self.display_tree(data)
-                    accuracy_question = create_widgets_for_column_grouping()
-                    display(accuracy_question)
-                    
-                else:
-                    clear_output(wait=True)
-                    print("Submission received.")
-                    next_step()
-
-            submit_button.on_click(on_button_clicked)
-
-            accuracy_question = widgets.VBox([accuracy_question_label, accuracy_check, feedback_container, submit_button])
-
-            return accuracy_question, on_button_clicked
-
-        accuracy_question, on_button_clicked = create_widgets_for_column_grouping()
-
-        display(accuracy_question)
-
-        if self.viewer:
-            on_button_clicked(None)
-
-        
-    
-    def execute_project(self):
-        next_step = self.check_duplicated_rows
-
-        if self.project_step_finished:
-            next_step()
-            return
-
-        keep_column_indices = self.document["project"]
-        remove_column_indices = [i for i in range(len(self.df.columns)) if i not in keep_column_indices]
-
-        if len(remove_column_indices) > 0:
-            remove_columns_step = RemoveColumnsStep(sample_df = self.df[:2], col_indices = remove_column_indices, name="Project Columns")
-            self.pipeline.add_step_to_final(remove_columns_step)
-            self.df = self.pipeline.run_codes()
-        
-        self.project_step_finished = True
-        next_step()
-
-    def execute_drop_x_y_columns(self):
-        next_step = self.check_index_columns
-
-        if self.drop_x_y_columns_step_finished:
-            next_step()
-            return
-
-        remove_column_indices = self.document["x_y_columns"]["remove_columns"]
-
-        if len(remove_column_indices) > 0:
-            remove_columns_step = RemoveColumnsStep(sample_df = self.df[:2], col_indices = remove_column_indices, name="Remove _x _y Columns")
-            self.pipeline.add_step_to_final(remove_columns_step)
-            self.df = self.pipeline.run_codes()
-        
-        self.drop_x_y_columns_step_finished = True
-        next_step()
-
-    def execute_drop_duplicated_columns(self):
-        next_step = self.check_x_y_columns
-
-        if self.drop_duplicated_colulmn_step_finished:
-            next_step()
-            return
-        
-        remove_column_indices = self.document["duplicate_columns"]["remove_columns"]
-
-        if len(remove_column_indices) > 0:
-            remove_columns_step = RemoveColumnsStep(sample_df = self.df[:2], col_indices = remove_column_indices, name="Remove Duplicated Columns") 
-            self.pipeline.add_step_to_final(remove_columns_step)
-            self.df = self.pipeline.run_codes()
-        
-        self.drop_duplicated_colulmn_step_finished = True
-        next_step()
-
-    def execute_index_columns(self):
-        next_step = self.check_data_type
-
-        if self.drop_index_column_step_finished:
-            next_step()
-            return
-        
-        index_column_indices = self.document["index_columns"]["remove_columns"]
-
-        if len(index_column_indices) > 0:
-            remove_columns_step = RemoveColumnsStep(sample_df = self.df[:2], col_indices = index_column_indices, name="Remove Index Columns")
-            self.pipeline.add_step_to_final(remove_columns_step)
-            self.df = self.pipeline.run_codes()
-        
-        self.drop_index_column_step_finished = True
-        next_step()
-
-    def execute_drop_all_missing_columns(self):
-        next_step = self.check_duplicated_columns
-
-        if self.drop_all_missing_columns_step_finished:
-            next_step()
-            return
-
-        remove_column_indices = self.document["missing_columns"]["remove_columns"]
-
-        if len(remove_column_indices) > 0:
-            remove_columns_step = RemoveColumnsStep(sample_df = self.df[:2], col_indices = remove_column_indices, name="Remove All Missing Columns")
-            self.pipeline.add_step_to_final(remove_columns_step)
-            self.df = self.pipeline.run_codes()
-        
-        self.drop_all_missing_columns_step_finished = True
-        next_step()
-
-    def execute_deduplicated_rows(self):
-        next_step = self.check_all_missing_columns
-
-        if self.drop_duplicated_row_step_finished:
-            next_step()
-            return
-        
-        if self.document["duplicate_rows"]["remove_duplicates"]:
-            deduplicate_step = RemoveDuplicatesStep(sample_df = self.df[:2])
-            self.pipeline.add_step_to_final(deduplicate_step)
-            self.df = self.pipeline.run_codes()
-        
-        self.drop_duplicated_row_step_finished = True
-        next_step()
-
-    def execute_remove_data_type(self):
-        next_step = self.get_main_entity
-
-        if self.remove_data_type_step_finished:
-            next_step()
-            return
-
-        column_data_type_dict = {}
-
-        for column_name in self.document["data_type"]:
-            data_type = self.document["data_type"][column_name]["data_type"]
-            if "invalid_rows" in self.document["data_type"][column_name]:
-                column_data_type_dict[column_name] = data_type
-
-        if column_data_type_dict != {}:
-            clean_data_type_step = CleanDataType(sample_df = self.df[:2], column_data_type_dict = column_data_type_dict)
-            self.pipeline.add_step_to_final(clean_data_type_step)
-            self.df = self.pipeline.run_codes()
-        
-        self.remove_data_type_step_finished = True
-        next_step()
-
-        
-    def execute_rename_column(self):
-
-        next_step = self.get_table_summary
-
-        if self.rename_step_finished:
-            self.stats = collect_df_statistics(self)
-            next_step()
-            return
-
-        rename_summary = self.document["rename_column"]["summary"]
-
-        self.name_mapping = {}
-
-        if self.rename_table:
-            for item in rename_summary:
-                if item['rename'] != '':
-                    print(f"Renaming column {item['column']} to {item['rename']}")
-                    self.name_mapping[item['column']] = item['rename']
-
-        if not self.name_mapping == {}:
-            rename_step = ColumnRename(sample_df = self.df[:2], rename_map = self.name_mapping)
-            self.pipeline.add_step_to_final(rename_step)
-            self.df = self.pipeline.run_codes()
-
-        self.rename_step_finished = True
-        
-
-
-
-
-        self.stats = collect_df_statistics(self)
-
-
-        next_step()
-
-    def generate_pipeline(self):
-        return self.pipeline
-
-    def decide_project(self, overwrite=False, once=False):
-        
-        next_step = self.execute_project
-
-        if "project" not in self.document:
-            pass
-        else:
-            if not overwrite:
-                write_log("Warning: project already exists in the document.")
-                if not once:
-                    next_step()
-                return
-        
-        create_progress_bar_with_numbers(0, doc_steps)
-
-        df = self.df
-
-        df_sample = df[:100]
-        display(HTML(wrap_in_scrollable_div(truncate_html_td(df_sample.to_html()))))
-
-        num_cols = len(df.columns)
-
-        display(HTML(f"<p>🧐 There are <b>{num_cols}</b> columns. Please select the columns that you want to keep.</p>"))
-
-        column_names = self.df.columns.to_list()
-
-        def callback_next(selected_indices):
-            clear_output(wait=True)
-            self.document["project"] = selected_indices
-            next_step()
-
-        create_column_selector(column_names, callback_next, default=True)
-
-        if self.viewer:
-            callback_next(list(range(num_cols)))
-            
-
-    def check_duplicated_rows(self, overwrite=False, once=False):
-
-        next_step = self.execute_deduplicated_rows
-
-        if "duplicate_rows" not in self.document or \
-           "duplicated_indices" not in self.document["duplicate_rows"] or\
-            "remove_duplicates" not in self.document["duplicate_rows"]:
-            self.document["duplicate_rows"] = {}
-        else:
-            if self.document["duplicate_rows"] and not overwrite:
-                write_log("Warning: duplicate_rows already exists in the document.")
-                if not once:
-                    next_step()
-                return
-        
-        create_progress_bar_with_numbers(0, doc_steps)
-        print("🔍 Checking duplicated rows...")
-        
-        duplicated_indices = find_duplicate_indices(self.df)
-        self.document["duplicate_rows"]["duplicated_indices"] = duplicated_indices
-        self.document["duplicate_rows"]["num_duplicated_rows"] = len(duplicated_indices)
-
-        if len(duplicated_indices) > 0:
-            display_duplicated_rows_html(self.df, duplicated_indices)
-
-            def on_button_clicked(b):
-                clear_output(wait=True)
-                if b.description == 'Yes':
-                    self.document["duplicate_rows"]["remove_duplicates"] = True
-                else:
-                    self.document["duplicate_rows"]["remove_duplicates"] = False
-                next_step()
-
-            yes_button = widgets.Button(
-                description='Yes',
-                disabled=False,
-                button_style='',
-                tooltip='Click to submit Yes',
-                icon='check'
-            )
-
-            no_button = widgets.Button(
-                description='No',
-                disabled=False,
-                button_style='',
-                tooltip='Click to submit No',
-                icon='times'
-            )
-
-            yes_button.on_click(on_button_clicked)
-            no_button.on_click(on_button_clicked)
-
-            display(HBox([yes_button, no_button]))
-
-            if self.viewer:
-                on_button_clicked(yes_button)
-
-
-        else:
-            self.document["duplicate_rows"]["remove_duplicates"] = False
-            next_step()
-
-    def check_index_columns(self, overwrite=False, once=False):
-        next_step = self.execute_index_columns
-
-        if "index_columns" not in self.document or\
-            "index_column_indices" not in self.document["index_columns"] or \
-            "remove_columns" not in self.document["index_columns"]:
-            self.document["index_columns"] = {}
-        else:
-            if self.document["index_columns"] and not overwrite:
-                write_log("Warning: index_columns already exists in the document.")
-                if not once:
-                    next_step()
-                return
-        
-        clear_output(wait=True)
-        create_progress_bar_with_numbers(0, doc_steps)
-        print("🔍 Checking index columns...")
-
-        index_column_indices = find_default_index_column(self.df)
-
-        self.document["index_columns"]["index_column_indices"] = index_column_indices
-        self.document["index_columns"]["index_column_names"] = [self.df.columns[i] for i in index_column_indices]
-
-        if len(index_column_indices) > 0:
-            display_index_and_ask_removal(self.df, index_column_indices)
-
-            def callback_next(selected_indices):
-                to_remove_indices = [index_column_indices[i] for i in selected_indices]
-
-                self.document["index_columns"]["remove_columns"] = to_remove_indices
-                next_step()
-
-            create_column_selector(self.df.columns.to_list(), callback_next)
-
-            if self.viewer:
-                callback_next([])
-
-        else:
-            self.document["index_columns"]["remove_columns"] = []
-            next_step()
-
-
-
-    def check_all_missing_columns(self, overwrite=False, once=False):
-
-        next_step = self.execute_drop_all_missing_columns
-
-        if "missing_columns" not in self.document or\
-              "missing_column_indices" not in self.document["missing_columns"] or\
-              "remove_columns" not in self.document["missing_columns"]:
-            self.document["missing_columns"] = {}
-        else:
-            if self.document["missing_columns"] and not overwrite:
-                write_log("Warning: missing_columns already exists in the document.")
-                if not once:
-                    next_step()
-                return
-
-        clear_output(wait=True)
-        create_progress_bar_with_numbers(0, doc_steps)
-        print("🔍 Checking columns with all missing values...")
-        
-        missing_column_indices = columns_with_all_missing_values(self.df)
-        self.document["missing_columns"]["missing_column_indices"] = missing_column_indices
-        self.document["missing_columns"]["missing_column_names"] = [self.df.columns[i] for i in missing_column_indices]
-
-        if len(missing_column_indices) > 0:
-            display_and_ask_removal(self.df, missing_column_indices)
-
-            column_names = self.df.columns.to_list()
-
-            missing_columns = [column_names[i] for i in missing_column_indices]
-
-            def callback_next(selected_indices):
-                to_remove_indices = [missing_column_indices[i] for i in selected_indices]
-                self.document["missing_columns"]["remove_columns"] = to_remove_indices
-                next_step()
-
-            create_column_selector(missing_columns, callback_next)
-
-            if self.viewer:
-                callback_next(list(range(len(missing_columns))))
-        
-        else:
-            self.document["missing_columns"]["remove_columns"] = []
-            next_step()
-
-    def check_duplicated_columns(self, overwrite=False, once=False):
-        next_step = self.execute_drop_duplicated_columns
-
-        if "duplicate_columns" not in self.document or\
-            "duplicated_column_indices" not in self.document["duplicate_columns"] or\
-            "remove_columns" not in self.document["duplicate_columns"]:
-            self.document["duplicate_columns"] = {}
-        else:
-            if self.document["duplicate_columns"] and not overwrite:
-                write_log("Warning: duplicate_columns already exists in the document.")
-                if not once:
-                    next_step()
-                return
-                
-        clear_output(wait=True)
-        create_progress_bar_with_numbers(0, doc_steps)
-        print("🔍 Checking duplicated columns...")
-
-        duplicated_column_indices = find_duplicate_column_indices(self.df)
-
-        self.document["duplicate_columns"]["duplicated_column_indices"] = duplicated_column_indices
-        self.document["duplicate_columns"]["duplicated_column_names"] = [[self.df.columns[i] for i in group_indices] for group_indices in duplicated_column_indices]
-
-        if len(duplicated_column_indices) > 0:
-            display_duplicated_columns_html(self.df, duplicated_column_indices)
-            
-            column_names = self.df.columns.to_list()
-
-            duplicated_columns = []
-            for group_indices in duplicated_column_indices:
-                duplicated_columns += [f"{column_names[i]} ({i+1})" for i in group_indices]
-            
-            def callback_next(selected_indices):
-                
-                flattened_indices = [item for sublist in duplicated_column_indices for item in sublist]
-
-                to_remove_indices = [flattened_indices[i] for i in selected_indices]
-
-                self.document["duplicate_columns"]["remove_columns"] = to_remove_indices
-                next_step()
-            
-            create_column_selector(duplicated_columns, callback_next)
-
-            if self.viewer:
-                callback_next(list(range(len(duplicated_columns))))
-
-        else:
-            self.document["duplicate_columns"]["remove_columns"] = []
-            next_step()
-
-    def check_x_y_columns(self, overwrite=False, once=False):
-        next_step = self.execute_drop_x_y_columns
-
-        if "x_y_columns" not in self.document or \
-            "x_y_column_indices" not in self.document["x_y_columns"] or \
-            "remove_columns" not in self.document["x_y_columns"]:
-            self.document["x_y_columns"] = {}
-        else:
-            if self.document["x_y_columns"] and not overwrite:
-                write_log("Warning: x_y_columns already exists in the document.")
-                if not once:
-                    next_step()
-                return
-
-        clear_output(wait=True)
-        create_progress_bar_with_numbers(0, doc_steps)
-
-        print("🔍 Checking x and y columns...")
-
-        x_y_column_indices = find_columns_with_xy_suffix_indices(self.df)
-
-        self.document["x_y_columns"]["x_y_column_indices"] = x_y_column_indices
-        self.document["x_y_columns"]["x_y_column_names"] = [[self.df.columns[i] for i in group_indices] for group_indices in x_y_column_indices]
-
-        if len(x_y_column_indices) > 0:
-            display_xy_duplicated_columns_html(self.df, x_y_column_indices)
-
-            column_names = self.df.columns.to_list()
-
-            x_y_columns = []
-
-            for group_indices in x_y_column_indices:
-                x_y_columns += [column_names[i] for i in group_indices]
-
-            def callback_next(selected_indices):
-
-                flattened_indices = [item for sublist in x_y_column_indices for item in sublist]
-
-                to_remove_indices = [flattened_indices[i] for i in selected_indices]
-
-                self.document["x_y_columns"]["remove_columns"] = to_remove_indices
-                next_step()
-
-            create_column_selector(x_y_columns, callback_next)
-
-            if self.viewer:
-                callback_next(list(range(len(x_y_columns))))
-
-        else:
-            self.document["x_y_columns"]["remove_columns"] = []
-            next_step()
-
-    def check_data_type(self, overwrite=False, once=False):
-        next_step = self.execute_remove_data_type
-
-        if "data_type" in self.document:
-            if self.document["data_type"] and not overwrite:
-                write_log("Warning: data_type already exists in the document.")
-                if not once:
-                    next_step()
-                return
-
-
-        clear_output(wait=True)
-        
-        clear_output(wait=True)
-        create_progress_bar_with_numbers(0, doc_steps)
-        print("🔍 Checking data types...")
-
-        table_name = self.get_table_name()
-
-        duckdb_conn = duckdb.connect()
-        duckdb_conn.register(table_name, self.df)
-
-        schema_query = f"PRAGMA table_info('{table_name}')"
-        schema_info = duckdb_conn.execute(schema_query).df()
-
-        self.document["data_type"] = {}
-
-        has_invalid_data_type = False
-
-        df = self.df
-
-        for index, row in schema_info.iterrows():
-            column_name = row['name']
-            data_type = row['type'].upper()
-
-            
-
-            mask = select_invalid_data_type(df, column_name, data_type)
-            
-            self.document["data_type"][column_name] = {"data_type": data_type}
-
-            if mask.any():
-                print(f"{BOLD}Column '{column_name}'{END} is of type {ITALIC}{data_type}{END}.")
-
-
-                example = df[mask][column_name][:5].to_list()
-                self.document["data_type"][column_name]["invalid_rows"] = example
-
-                print(f"    ⚠️ There are {mask.sum()} invalid rows that don't match the data type.")
-                print(f"    ⚠️ Examples: {example}")
-
-                has_invalid_data_type = True
-
-        if has_invalid_data_type:
-            print("⚠️ These invalid rows have to be removed.")
-            print("😊 Support for more flexible cleaning is coming soon.")
-
-            def on_button_clicked(b):
-                clear_output(wait=True)
-                next_step()
-
-            next_button = widgets.Button(
-                description='Next',
-                disabled=False,
-                button_style='',
-                tooltip='Click to go to the next step',
-                icon='check'
-            )
-
-            next_button.on_click(on_button_clicked)
-
-            display(next_button)
-
-            if self.viewer:
-                on_button_clicked(next_button)
-        
-        else:
-            next_step()
-
-
-    def rename_column(self, overwrite=False, once=False):
-        next_step = self.execute_rename_column
-        if "rename_column" not in self.document:
-            self.document["rename_column"] = {}
-        else:
-            if self.document["rename_column"] and not overwrite:
-                write_log("Warning: rename_column already exists in the document.")
-                if not once:
-                    next_step()
-                return
-        create_progress_bar_with_numbers(1, doc_steps)
-        print("🏷️ Renaming the columns...")
-        progress = self.show_progress(1)
-
-        meanings = self.document["column_meaning"]["summary"]
-
-        max_trials = 3
-
-        while max_trials > 0:
-            try:
-                json_code, messages = get_rename(meanings)
-                progress.value += 1
-                break
-                
-            except Exception as e:
-                write_log(f"Error: {e}")
-                write_log("-----------------------------------")
-                max_trials -= 1
-                if max_trials == 0:
-                    raise e
-                continue
-
-
-
-
-
-
-        
-
-        self.document["rename_column"]["summary"] = json_code
-        if LOG_MESSAGE_HISTORY:
-            self.document["rename_column"]["history"] = messages
-
-        next_step()                                    
-
-    def get_column_meaning(self, overwrite=False, once=False):
-        next_step = self.rename_column
-        if "column_meaning" not in self.document:
-            self.document["column_meaning"] = {}
-        else:
-            if self.document["column_meaning"] and not overwrite:
-                write_log("Warning: column_meaning already exists in the document.")
-                if not once:
-                    next_step()
-                return
-        create_progress_bar_with_numbers(1, doc_steps)
-        print("💡 Understanding the columns...")
-        progress = self.show_progress(1)
-
-        main_entity = self.document["main_entity"]["summary"]
-        basic_description = self.get_basic_description()
-
-
-
-
-
-
-        template = f"""{basic_description}
-
-This table is about {main_entity}. The goal is study the high-level column meaning.
-Use short simple words to describe the most possible meanings.
-Respond in JSON, for all columns:
-```json
-[{{
-   "column": "column_name",
-   "meaning": "short, simple  guess on the meaning"
-}},...]
-```"""
-        
-        max_trials = 3
-
-        while max_trials > 0:
-            try:
-                messages = [{"role": "user", "content": template}]
-
-                response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-
-                progress.value += 1
-
-                write_log(template)
-                write_log("-----------------------------------")
-                write_log(response['choices'][0]['message']['content'])
-                
-                json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
-                data = json.loads(json_code)
-
-                messages.append(response['choices'][0]['message'])
-
-                def check_column_complete(data):
-                    if len(data) != len(self.df.columns):
-                        raise Exception("Not all columns are covered in the column meaning.")
-
-                    for item in data:
-                        if item['column'] not in self.df.columns:
-                            raise Exception(f"Column {item['column']} does not exist in the table.")
-                
-                check_column_complete(data)
-
-                self.document["column_meaning"]["summary"] = data
-                if LOG_MESSAGE_HISTORY:
-                    self.document["column_meaning"]["history"] = messages
-
-                break
-            
-            except Exception as e:
-                write_log(f"Error: {e}")
-                write_log("-----------------------------------")
-                max_trials -= 1
-                if max_trials == 0:
-                    raise e
-                continue
-
-        clear_output(wait=True)
-
-        def radio_change_handler(change):
-            instance = change['owner']
-            if instance.value == 'Other':
-                instance.text_area.layout.display = ''
-            else:
-                instance.text_area.layout.display = 'none'
-
-        container = widgets.VBox()
-
-        column_to_radio = {}
-
-        for item in data:
-            if 'ambiguous' in item and item['ambiguous']:
-                label_text = f"<b>{item['column']}</b>: <span style='color: red;'>(This column has ambiguous interpretations)</span>"
-            else:
-                label_text = f"<b>{item['column']}</b>:"
-
-            label = widgets.HTML(
-                value=label_text, 
-                layout=widgets.Layout(margin='0 0 10px 0')
-            )
-            
-            options = [item['meaning']] 
-            if 'ambiguous' in item:
-                options += item['ambiguous']
-            options += ['Other']
-            
-            radio = widgets.RadioButtons(
-                options=options,
-                value=item['meaning'],
-                layout=widgets.Layout(width='80%', align_items='flex-start')
-            )
-            
-            text_area = widgets.Textarea(
-                value='',
-                placeholder='Please provide the meaning of the column.',
-                description='',
-                disabled=False,
-                layout=widgets.Layout(display='none', width='100%')
-            )
-            
-            radio.text_area = text_area
-            column_to_radio[item['column']] = radio
-            radio.observe(radio_change_handler, names='value')
-            
-            container.children += (label, radio, text_area)
-
-        def submit_callback(btn):
-            error_items = []
-            
-            for item in data:
-                radio = column_to_radio[item['column']] 
-                if radio.value == 'Other' and not radio.text_area.value.strip():
-                    error_items.append(item)
-            
-            if error_items:
-                clear_output(wait=True)
-                display(container, submit_btn)
-                for item in error_items:
-                    print(f"\033[91m{item['column']} meaning can't be empty.\033[0m")
-            else:
-                clear_output(wait=True)
-                feedback_data = []
-
-                for item in data:
-                    radio = column_to_radio[item['column']] 
-                    
-                    if radio.value == 'Other':
-                        feedback_data.append({'column': item['column'], 'meaning': radio.text_area.value})
-                    else:
-                        feedback_data.append({'column': item['column'], 'meaning': radio.value})
-                self.document["column_meaning"]["summary"] = feedback_data
-                if LOG_MESSAGE_HISTORY:
-                    self.document["column_meaning"]["history"].append({"role": "user",
-                                                                    "content": feedback_data})
-                print("Submission received.")
-                next_step()
-                                                                          
-
-                        
-        submit_btn = widgets.Button(
-            description="Submit",
-            button_style='',
-            tooltip='Submit',
-            icon=''
-        )
-
-        submit_btn.on_click(submit_callback)
-
-        display(container, submit_btn)
-
-        if self.viewer:
-            submit_callback(submit_btn)
-
-    
-    def get_main_entity(self, overwrite=False, once=False):
-
-        next_step = self.get_column_meaning
-        
-        if "main_entity" not in self.document:
-            self.document["main_entity"] = {}
-        else:
-            if self.document["main_entity"] and not overwrite:
-                write_log("Warning: main_entity already exists in the document.")
-                if not once:
-                    next_step()
-                return
-
-        create_progress_bar_with_numbers(1, doc_steps)
-
-        print("💡 Understanding the table...")
-        progress = self.show_progress(1)
-
-        basic_description = self.get_basic_description()
-
-        template = f"""{basic_description}
-
-Identify the main entity this table is mainly recording. 
--   Entity is tangible or conceptual thing that can exist or be conceptualized individually.
-    Example of Entity: Person, Course, Location, Time, School, Job
--   Entity is not property, or aspect. Infer the main underlying entities. 
-    Example of Non-entity: Height, Weight, Information, Name, Finance
-    For height, the main underlying entity is "People"
--   Entity shall be a clear single phrase. Don't use / to combine entities.
-
-1. Start by reasoning what the table is about, and the candidate main entities.
-   If there are multiple candidate main entities, discuss if there is a main relationship entity that can be used to group them.
-2. Conclude by listing the main entity. 
-
-Now respond in the following format:
-```json
-{{
-    "reasoning": "The table is about ...",
-    "main entity": "..."
-}}
-```"""
-
-        messages = [{"role": "user", "content": template}]
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-
-        progress.value += 1
-        
-        write_log(template)
-        write_log("-----------------------------------")
-        write_log(response['choices'][0]['message']['content'])
-        
-        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
-        json_code = json.loads(processed_string)
-        main_entity = json_code['main entity']
-
-        messages.append(response['choices'][0]['message'])
-        self.document["main_entity"]["summary"] = main_entity
-        self.document["main_entity"]["reasoning"] = json_code['reasoning']
-        if LOG_MESSAGE_HISTORY:
-            self.document["main_entity"]["history"] = messages
-
-        clear_output(wait=True)
-        reason = json_code['reasoning']
-        print(f'\033[1mThe table is mainly talking about: \033[0m{main_entity}')
-        print(f'\033[1mDetails\033[0m: {reason}')
-
-        accuracy_question_label = widgets.Label(value='Is the above information accurate?')
-
-        accuracy_check = widgets.RadioButtons(
-            options=['Yes', 'No'],
-            description='',
-            disabled=False
-        )
-
-        label = widgets.Label(value='If not accurate, the table is mainly talking about:')
-
-        text_area = widgets.Textarea(
-            value='',
-            placeholder='Type here',
-            description='',
-            disabled=True
-        )
-
-        feedback_container = widgets.VBox([label, text_area], layout=Layout(display='none'))
-
-        submit_button = widgets.Button(
-            description='Submit',
-            disabled=False,
-            button_style='',
-            tooltip='Click to submit',
-            icon='check'
-        )
-
-        def on_button_clicked(b):
-            clear_output(wait=True)
-            if accuracy_check.value == 'No':
-                if text_area.value == '':
-                    display(accuracy_question)
-                    print("\033[91mPlease enter the information\033[0m.")
-                    return
-                corrected_entity = text_area.value
-                
-                print(f"Corrected information received. This table is mainly about {corrected_entity}")
-                self.document["main_entity"]["summary"] = corrected_entity
-                if LOG_MESSAGE_HISTORY:
-                    self.document["main_entity"]["history"].append({"role": "user", 
-                                                                "content": template})
-            else:
-                print("Submission received.")
-                next_step()
-
-        def on_value_change(change):
-            if change['new'] == 'No':
-                feedback_container.layout.display = ''
-                text_area.disabled = False
-            else:
-                feedback_container.layout.display = 'none'
-                text_area.disabled = True
-
-        accuracy_check.observe(on_value_change, names='value')
-
-        submit_button.on_click(on_button_clicked)
-
-        accuracy_question = widgets.VBox([accuracy_question_label, accuracy_check, feedback_container, submit_button])
-
-        display(accuracy_question)
-
-        if self.viewer:
-            on_button_clicked(submit_button)
-
-
-    def document_all(self):
-        self.get_main_entity()
-        self.get_column_grouping()
-        self.check_consistency_all()
-        self.check_pattern_all()
-        self.check_missing_all()
-        self.check_unusual_all()
-
-    def check_missing_all(self):
-        next_step = self.check_unusual_all
-
-        create_progress_bar_with_numbers(2, doc_steps)
-        print("❓ Checking the missing values...")
-        progress = self.show_progress(len(self.df.columns))
-
-        for col in self.df.columns:
-            self.check_missing(col)
-
-            progress.value += 1
-
-        ambiguous_missing = {}
-        
-        for col in self.document["missing_value"]:
-            if "summary" in self.document["missing_value"][col]:
-                summary = self.document["missing_value"][col]["summary"]
-                if isinstance(summary, list):
-                    ambiguous_missing[col] = summary
-
-        if not ambiguous_missing:
-            next_step()
-            return
-
-        clear_output(wait=True)
-        print("The following columns have missing values: ❓")
-
-        def radio_change_handler(change):
-            instance = change['owner']
-            if instance.value == 'Other':
-                instance.text_area.layout.display = ''
-            else:
-                instance.text_area.layout.display = 'none'
-
-        container = widgets.VBox()
-
-
-        col_to_radio = {}
-
-        for item in ambiguous_missing:
-            
-            label_text = f"<b>{item}</b>"
-
-            label = widgets.HTML(value=label_text)
-
-            reasons = ambiguous_missing[item]
-            options = [f"{reason['class']}: {reason['explanation']}" for reason in reasons] + ['Unclear','Other']
-
-            radio = widgets.RadioButtons(
-                options=options,
-                value=options[0],
-                layout=widgets.Layout(width='80%', align_items='flex-start')
-            )
-            
-            text_area = widgets.Textarea(
-                value='',
-                placeholder='Please provide the reason for missing values.',
-                description='',
-                disabled=False,
-                layout=widgets.Layout(display='none', width='100%')
-            )
-            
-            radio.text_area = text_area
-            col_to_radio[item] = radio
-            radio.observe(radio_change_handler, names='value')
-            
-            item_container = widgets.VBox([label, radio, text_area])
-            container.children += (item_container,)
-
-        def submit_callback(btn):
-            error_items = []
-            
-            for col in col_to_radio:
-                radio = col_to_radio[col]
-                if radio.value == 'Other' and not radio.text_area.value.strip():
-                    error_items.append(col)
-            
-            if error_items:
-                for col in error_items:
-                    print(f"\033[91m{col} reason can't be empty.\033[0m")
-            else:
-                clear_output(wait=True)
-
-                for col in col_to_radio:
-                    radio = col_to_radio[col]
-                    
-                    if radio.value == 'Other':
-                        self.document["missing_value"][col]["summary"] = radio.text_area.value
-                        if LOG_MESSAGE_HISTORY:
-                            self.document["missing_value"][col]["history"].append({"role": "user",
-                                                                                            "content": radio.text_area.value})
-                    else:
-                        self.document["missing_value"][col]["summary"] = radio.value
-                        if LOG_MESSAGE_HISTORY:
-                            self.document["missing_value"][col]["history"].append({"role": "user",
-                                                                                     "content": radio.value})
-                
-                print("Submission received.")
-                next_step()
-                                                                          
-
-                        
-        submit_btn = widgets.Button(
-            description="Submit",
-            button_style='',
-            tooltip='Submit',
-            icon=''
-        )
-
-        submit_btn.on_click(submit_callback)
-
-        display(container, submit_btn)
-
-        if self.viewer:
-            submit_callback(submit_btn)
-
-        
-        
-
-    def check_missing(self, column: str):
-        if column not in self.df.columns:
-            raise ValueError(f"Column {column} does not exist in the DataFrame.")
-        
-        if "missing_value" not in self.document:
-            self.document["missing_value"] = {}
-
-        if column not in self.document["missing_value"]:
-            self.document["missing_value"][column] = {}
-        else:
-            if self.document["missing_value"][column]:
-                write_log(f"Warning: {column} already exists in the document.")
-                return
-        
-        df_col = self.df[column]
-
-        if isinstance(df_col, pd.DataFrame):
-            df_col = df_col.iloc[:, 0]
-
-        nan_rows = self.df[df_col.isna()]
-        non_nan_rows = self.df.dropna(subset=[column])
-
-        nan_sample = nan_rows.head(3)
-        non_nan_sample = non_nan_rows.head(3)
-
-        if len(nan_sample) == 0:
-            write_log(f"Warning: {column} does not have missing values.")
-            return
-
-        nan_sample_str = nan_sample.to_string(index=False)
-        non_nan_sample_str = ""
-        if len(non_nan_sample) > 0:
-            non_nan_sample_str = f"Sample of data without missing values:\n{non_nan_sample.to_string(index=False)}"
-        else:
-            non_nan_sample_str = "The whole column has missing values."
-
-        main_entity = self.document["main_entity"]["summary"]
-
-        template = f"""In a table about {main_entity}, {column} has missing value.
-
-Sample of data with missing values:
-{nan_sample_str}
-
-{non_nan_sample_str}
-
-There are general 5 classes of missing values:
-    Not Applicable: Certain questions or fields do not apply to the individual/entity being measured. For example, a question about "spouse's occupation" wouldn't apply to someone who is unmarried.
-    Censorship: for sensitive attribute, the data can be masked for privacy
-    Non-Response: The subject chose not to provide information or ignored the request. This is common in surveys and certain types of observational research.
-    Not Collected: Information wasn't gathered due to oversight, resource limitations (e.g., certain tests or measures could not be performed), or it was deemed unnecessary at the time of collection.
-    Damaged Data: Information was originally collected but later became unavailable or corrupted due to issues in data storage, transfer, or processing.
-
-Now, please provide the top 3 most likely reasons, order by likelihood (use your common sense to judge), in the following format: 
-```json
-[{{"class": "The above 5 classes, or Other",
-   "explanation": "Short explanation of the reason in 5 words",}}...]
-```"""
-
-
-        messages = [{"role": "user", "content": template}]
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-        
-        write_log(template)
-        write_log("-----------------------------------")
-        write_log(response['choices'][0]['message']['content'])
-        
-        messages.append(response['choices'][0]['message'])
-        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
-        json_code = json.loads(processed_string)
-        self.document["missing_value"][column]["summary"] = json_code
-        if LOG_MESSAGE_HISTORY:
-            self.document["missing_value"][column]["history"] = messages
-
-    
-    def recommend_testing(self, overwrite=False, once=False):
-        next_step = self.complete
-
-        if "recommend_testing" in self.document:
-            if self.document["recommend_testing"] and not overwrite:
-                write_log("Warning: recommend_testing already exists in the document.")
-                if not once:
-                    next_step()
-                return
-
-        create_progress_bar_with_numbers(3, doc_steps)
-        print("🔍 Recommending testing...")
-        progress = self.show_progress(1)
-
-        basic_description = self.get_basic_description()
-        table_name = self.get_table_name()
-
-        json_code = recommend_testing(basic_description, table_name)
-        
-        progress.value += 1
-
-        self.document["recommend_testing"] = json_code
-
-        clear_output(wait=True)
-
-        next_step()
-
-    def check_unusual_all(self):
-        next_step = self.recommend_testing
-
-        column_meanings = self.document['column_meaning']['summary']
-        unusual_columns = {}
-        create_progress_bar_with_numbers(3, doc_steps)
-        print("🤔 Checking the unusual values...")
-        progress = self.show_progress(len(self.df.columns))
-
-        for column_meaning in column_meanings:
-            col = column_meaning['column']
-            if col in self.name_mapping:
-                col = self.name_mapping[col]
-            meaning = column_meaning['meaning']
-
-            self.check_unusual(col, meaning)
-
-            result = self.document['unusual'][col]['summary']
-
-            if result['Unusualness'] and 'Explanation' not in result:
-                unusual_columns[col] = result
-
-            progress.value += 1
-
-        if not unusual_columns:
-            next_step()
-            return
-
-        clear_output(wait=True)
-        print("The following columns have unusual values. Please provide the explanation as much as possible.")
-
-        def radio_change_handler(change):
-            instance = change['owner']
-            if instance.value == 'Explanation:':
-                instance.text_area.layout.display = ''
-            else:
-                instance.text_area.layout.display = 'none'
-
-        container = widgets.VBox()
-
-
-        col_to_radio = {}
-
-        for item in unusual_columns:
-
-            reasons = unusual_columns[item]
-            
-            label_text = f"<b>{item}</b>: {reasons['Examples']}"
-
-            label = widgets.HTML(value=label_text)
-
-            options = ['Unclear', 'Explanation:']
-
-            radio = widgets.RadioButtons(
-                options=options,
-                value=options[0],
-                layout=widgets.Layout(width='80%', align_items='flex-start')
-            )
-            
-            text_area = widgets.Textarea(
-                value='',
-                placeholder='Please provide the reason for unusual values.',
-                description='',
-                disabled=False,
-                layout=widgets.Layout(display='none', width='100%')
-            )
-            
-            radio.text_area = text_area
-            col_to_radio[item] = radio
-            radio.observe(radio_change_handler, names='value')
-            
-            item_container = widgets.VBox([label, radio, text_area])
-            container.children += (item_container,)
-
-        def submit_callback(btn):
-            error_items = []
-            
-            for col in col_to_radio:
-                radio = col_to_radio[col]
-                if radio.value == 'Explanation:' and not radio.text_area.value.strip():
-                    error_items.append(col)
-            
-            if error_items:
-                for col in error_items:
-                    print(f"\033[91m{col} explanation can't be empty.\033[0m")
-            else:
-                clear_output(wait=True)
-
-                for col in col_to_radio:
-                    radio = col_to_radio[col]
-                    
-                    if radio.value == 'Explanation:':
-                        self.document["unusual"][col]["summary"]["Explanation"] = radio.text_area.value
-                        if LOG_MESSAGE_HISTORY:
-                            self.document["unusual"][col]["history"].append({"role": "user",
-                                                                                            "content": radio.text_area.value})
-                    else:
-                        self.document["unusual"][col]["summary"]["Explanation"] = "Unclear"
-                
-                print("Submission received.")
-                next_step()
-                                                                          
-
-                        
-        submit_btn = widgets.Button(
-            description="Submit",
-            button_style='',
-            tooltip='Submit',
-            icon=''
-        )
-
-        submit_btn.on_click(submit_callback)
-
-        display(container, submit_btn)
-
-        if self.viewer:
-            submit_callback(submit_btn)
-
-
-
-    def check_unusual(self, col, meaning):
-        if col not in self.df.columns:
-            raise ValueError(f"Column {col} does not exist in the DataFrame.")
-        
-        if "unusual" not in self.document:
-            self.document["unusual"] = {}
-
-        if col not in self.document["unusual"]:
-            self.document["unusual"][col] = {}
-        else:
-            if self.document["unusual"][col]:
-                write_log(f"Warning: {col} unusual already exists in the document.")
-                return
-
-        df_col = self.df[col]
-
-        if isinstance(df_col, pd.DataFrame):
-            df_col = df_col.iloc[:, 0]
-
-        unique_values = df_col.dropna().unique()
-
-        values_string = f"The actual data have {len(unique_values)} unique values: "
-
-        def construct_string_with_limit(base_string, values, char_limit):
-            final_string = base_string
-
-            included_values = []
-
-            at_least_one = False
-
-            for value in values:
-                str_value = f"'{str(value)}'"
-
-                if not at_least_one or len(final_string) + len(str_value) + len(included_values) * len(", ") < char_limit:
-                    included_values.append(str_value)
-                    at_least_one = True
-                else:
-                    break
-
-            values_part = ", ".join(included_values)
-
-            if len(included_values) < len(values):
-                values_part += "..."
-
-            final_string += values_part
-
-            return final_string
-
-        char_limit = 300
-        values_string = construct_string_with_limit(values_string, unique_values, char_limit)
-
-
-
-        max_trials = 3
-
-        while max_trials > 0:
-
-            try:
-
-                today = datetime.date.today()
-
-                messages = [{"role": "user", 
-                            "content": f"The column '{col}' is about: {meaning}. Guess in 10 words how the values usually look like."}]
-
-                response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-
-                template = f"""{values_string}
-
-                Review if there are any unusual values. Look out for:
-                1. Values too large/small that are inconsistent with the context.
-                E.g., age 999 or -5.
-                Outlier is fine as long as it falls in a reasonable range, e.g., person age 120 is fine.
-                2. Patterns that don't align with the nature of the data.
-                E.g., age 10.22
-                3. Special characters that don't fit within the real-world domain.
-                E.g., age X21b 
-
-                Be careful about date as your knowledge of date is not updated. Today is {today}.
-
-                Follow below step by step:
-                1. Summarize the values. Reason if it is unusual or also acceptable.
-                2. Conclude with the following dict:
-
-                ```json
-                {{
-                    "Unusualness": true/false,
-                    "Examples": "xxx values are unusual because ..." (empty if not unusual) 
-                }}
-                ```"""
-
-                messages.append(response['choices'][0]['message'])
-                messages.append({"role": "user", 
-                "content": template})
-
-                response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-
-                messages.append(response['choices'][0]['message'])
-
-                for message in messages:  
-                    write_log(message['content'])
-                    write_log("-----------------------------------")
-                
-                processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
-                json_code = json.loads(processed_string)
-
-                if "Unusualness" not in json_code:
-                    raise Exception("Unusualness is not in the json_code")
-                
-                if json_code["Unusualness"] and "Examples" not in json_code:
-                    raise Exception("Unusualness is true but Examples is not in the json_code")
-
-                break
-
-            except Exception as e:
-                write_log(f"Error: {e}")
-                write_log("-----------------------------------")
-                max_trials -= 1
-                if max_trials == 0:
-                    raise e
-                continue
-
-
-        self.document["unusual"][col]["summary"] = json_code
-        if LOG_MESSAGE_HISTORY:
-            self.document["unusual"][col]["history"] = messages
-
-    def check_consistency_all(self):
-        for col in self.df.columns:
-            self.check_consistency(col)
-
-    def check_consistency(self, col: str):
-        if col not in self.df.columns:
-            raise ValueError(f"Column {col} does not exist in the DataFrame.")
-        
-        if "consistency" not in self.document:
-            self.document["consistency"] = {}
-        
-        if col not in self.document["consistency"]:
-            self.document["consistency"][col] = {}
-        else:
-            if self.document["consistency"][col]:
-                write_log(f"Warning: {col} already exists in the document.")
-                return
-        
-        result = process_dataframe(self.df, 'consistency.txt', col_name=col)
-
-        processed_string = escape_json_string(result[-1]["content"])
-        content = json.loads(processed_string)['Action']['Content'] 
-
-        if isinstance(content, str):
-            self.document["consistency"][col]["summary"] = json.loads(content)
-        else:
-            self.document["consistency"][col]["summary"] = content
-        if LOG_MESSAGE_HISTORY:
-            self.document["consistency"][col]["history"] = result
-
-    def check_pattern_all(self):
-        for col in self.df.columns:
-            self.check_pattern(col)
-
-    def check_pattern(self, col: str):
-        if col not in self.df.columns:
-            raise ValueError(f"Column {col} does not exist in the DataFrame.")
-        
-        if pd.api.types.is_numeric_dtype(self.df[col].dtype):
-            write_log(f"Warning: {col} is a numeric column. Skipping...")
-            return
-
-
-        if "pattern" not in self.document:
-            self.document["pattern"] = {}
-
-        if col not in self.document["pattern"]:
-            self.document["pattern"][col] = {}
-        else:
-            if self.document["pattern"][col]:
-                write_log(f"Warning: {col} already exists in the document.")
-                return
-        
-        result = process_dataframe(self.df, 'pattern.txt', col_name=col)
-
-        processed_string = escape_json_string(result[-1]["content"])
-        content = json.loads(processed_string)['Action']['Content'] 
-
-        if isinstance(content, str):
-            self.document["pattern"][col]["summary"] = json.loads(content)
-        else:
-            self.document["pattern"][col]["summary"] = content
-        if LOG_MESSAGE_HISTORY:
-            self.document["pattern"][col]["history"] = result
-
-    def to_yml(self):
-        table_name = self.table_name
-        description = self.document["main_entity"]["reasoning"]
-        column_meanings = self.document["column_meaning"]["summary"]
-
-        yaml_dict = {
-            "version": 2,
-            "models": [{
-                "name": table_name, 
-                "description": description,
-                "columns": []
-            }]
-        }
-
-        for column_info in column_meanings:
-            column_dict = {
-                "name": column_info["column"],
-                "description": column_info["meaning"]
-            }
-            yaml_dict["models"][0]["columns"].append(column_dict)
-            
-        return yaml_dict
-
-    def write_yml_to_disk(self, filepath: str):
-        yaml_dict = self.to_yml()
-        with open(filepath, 'w') as file:
-            yaml.dump(yaml_dict, file)
-
-    def write_document_to_disk(self, filepath: str):
-        with open(filepath, 'w') as file:
-            json.dump(self.document, file)
-
-    def read_document_from_disk(self, filepath: str, viewer=True):
-        with open(filepath, 'r') as file:
-            self.document = json.load(file)
-        self.start_document(viewer=viewer)
-
-    def __repr__(self):
-        self.display_document()
-        return ""
-
-    def save_file(self):
-        if self.table_name is not None:
-            data_name = self.table_name
-        else:
-            data_name = self.document['main_entity']['summary']
-
-        file_name = f"{data_name}_cocoon_data.json".replace(" ", "_")
-
-        print(f"🤓 Do you want to save the file?")
-
-        def save_file_click(b):
-            updated_file_name = file_name_input.value
-            allow_overwrite = overwrite_checkbox.value
-
-            if file_exists(updated_file_name) and not allow_overwrite:
-                print("\x1b[31m" + "Warning: Failed to save. File already exists." + "\x1b[0m")
-            else:
-                self.write_document_to_disk(updated_file_name)
-                print(f"🎉 File saved successfully as {updated_file_name}")
-
-        file_name_input = Text(value=file_name, description='File Name:')
-
-        save_button = Button(description="Save File")
-        save_button.on_click(save_file_click)
-
-        overwrite_checkbox = Checkbox(value=False, description='Allow Overwrite')
-
-        display(HBox([file_name_input, overwrite_checkbox]), save_button)
-
-        if self.viewer:
-            save_file_click(save_button)
-
-
-
-
 
 def get_value_from_path(data, path):
     """Recursively extract value from nested dict using the given path."""
@@ -5222,831 +1556,6 @@ def get_value_from_path(data, path):
     if not path:
         return data
     return get_value_from_path(data[path[0]], path[1:])
-
-class CDMTransformation:
-    def __init__(self, doc_df, log_file_path='data_log.txt'):
-
-        if isinstance(doc_df, DocumentedData):
-            self.doc_df = doc_df
-            self.pipeline = doc_df.generate_pipeline()
-        elif isinstance(doc_df, DataCleaning):
-            self.doc_df = doc_df.doc_df
-            self.pipeline = doc_df.generate_pipeline()
-
-        
-        
-        self.document = {}
-
-        self.log_file_path = log_file_path
-        database_description = """The database primarily focuses on healthcare data, structured around several interconnected entities. The central entity is the **PATIENT** table, which contains details about individuals receiving medical care. Their healthcare journey is tracked through the **VISIT_OCCURRENCE** table, which records each visit to a healthcare facility. The **CONDITION_OCCURRENCE** table details any diagnosed conditions during these visits, while the **DRUG_EXPOSURE** table captures information on medications prescribed to the patients.
-Procedures performed are logged in the **PROCEDURE_OCCURRENCE** table, and any medical devices used are listed in the **DEVICE** table. The **MEASUREMENT** table records various clinical measurements taken, and the **OBSERVATION** table notes any other relevant clinical observations.
-In cases where a patient passes away, the **DEATH** table provides information on the mortality. The **SPECIMEN** table tracks biological samples collected for analysis, and the **COST** table details the financial aspects of the healthcare services.
-The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, respectively detailing the geographical locations, healthcare facilities, and medical professionals involved in patient care. Lastly, the **PAYER_PLAN_PERIOD** table provides information on the patients' insurance coverage details and durations."""
-        self.database_description = database_description
-
-        tables = [
-            "PATIENT", "VISIT_OCCURRENCE", "CONDITION_OCCURRENCE", "DRUG_EXPOSURE", 
-            "PROCEDURE_OCCURRENCE", "DEVICE", "MEASUREMENT", "OBSERVATION", 
-            "DEATH", "SPECIMEN", "COST", "LOCATION", "CARE_SITE", "PROVIDER", 
-            "PAYER_PLAN_PERIOD"
-        ]
-        self.tables = tables
-
-        edges = [
-            ("PATIENT", "VISIT_OCCURRENCE"),
-            ("VISIT_OCCURRENCE", "CONDITION_OCCURRENCE"),
-            ("VISIT_OCCURRENCE", "DRUG_EXPOSURE"),
-            ("VISIT_OCCURRENCE", "PROCEDURE_OCCURRENCE"),
-            ("VISIT_OCCURRENCE", "DEVICE"),
-            ("VISIT_OCCURRENCE", "MEASUREMENT"),
-            ("VISIT_OCCURRENCE", "OBSERVATION"),
-            ("PATIENT", "DEATH"),
-            ("VISIT_OCCURRENCE", "SPECIMEN"),
-            ("VISIT_OCCURRENCE", "COST"),
-            ("VISIT_OCCURRENCE", "LOCATION"),
-            ("VISIT_OCCURRENCE", "CARE_SITE"),
-            ("VISIT_OCCURRENCE", "PROVIDER"),
-            ("PATIENT", "PAYER_PLAN_PERIOD")
-        ]
-        self.edges = edges
-        
-
-    def display_database(self):
-        database_description = replace_asterisks_with_tags(self.database_description)
-        display(HTML(f"<h1>OMOP CDM</h1>" + database_description))
-        visualize_graph(self.tables, self.edges)
-
-    def write_log(self, message: str):
-        self.log_file = open(self.log_file_path, 'a')
-        self.log_file.write(message + '\n')
-        self.log_file.close()
-
-    def complete(self):
-        print("Congratulation! The transformation is complete. 🚀")
-
-    def write_document_to_disk(self, filepath: str):
-        with open(filepath, 'w') as file:
-            json.dump(self.document, file)
-
-    def read_document_from_disk(self, filepath: str):
-        with open(filepath, 'r') as file:
-            self.document = json.load(file)
-
-    def show_progress(self, max_value):
-        progress = widgets.IntProgress(
-            value=1,
-            min=0,
-            max=max_value+1,  
-            step=1,
-            description='',
-            bar_style='',
-            orientation='horizontal'
-        )
-        
-        display(progress)
-        return progress
-
-    def start(self):
-        self.get_main_table()
-
-    def get_main_table(self):
-
-        next_step = self.decide_main_table
-
-        if "main_table" not in self.document:
-            self.document["main_table"] = {}
-        else:
-            if self.document["main_table"]:
-                write_log("Warning: main_table already exists in the document.")
-                next_step()
-                return
-
-        print("🤓 Identifying target tables to map to...")
-
-        progress = self.show_progress(1)
-        source_table_description = self.doc_df.document["table_summary"]["summary"]
-        
-        summary, messages = find_target_table(source_table_description)
-        progress.value += 1
-
-        for message in messages:
-            write_log(message['content'])
-            write_log("-----------------------------------")
-
-        for table in summary:
-            if table not in self.tables:
-                raise ValueError(f"Table {table} does not exist in the CDM.")
-        
-        self.document["main_table"]["summary"] = summary
-        if LOG_MESSAGE_HISTORY: 
-            self.document["main_table"]["history"] = messages
-
-        next_step()
-
-
-
-
-
-
-
-
-
-        
-
-
-
-    def concept_mapping(self, target_table):
-
-        next_step = self.write_codes2
-
-        if "concept_mapping" not in self.document:
-            self.document["concept_mapping"] = {}
-        
-        if target_table in self.document["concept_mapping"]:
-            write_log(f"Warning: {target_table} already exists in the document for concept_mapping.")
-        else:
-            print("🤓 Identifying the concept mapping...")
-
-            progress = self.show_progress(1)
-            source_table_description = self.doc_df.document["table_summary"]["summary"]
-            source_table_sample = self.doc_df.get_sample_text()
-            target_table_description = table_description[target_table]
-            target_table_sample = table_samples[target_table]
-            transform_reason = self.document["main_table"]["summary"][target_table]
-            
-            summary, messages = get_concept_mapping(source_table_description, source_table_sample, target_table_description, target_table_sample, transform_reason)
-            progress.value += 1
-
-            for message in messages:
-                write_log(message['content'])
-                write_log("-----------------------------------")
-
-
-            self.document["concept_mapping"][target_table] = {}
-            self.document["concept_mapping"][target_table]["summary"] = summary
-            if LOG_MESSAGE_HISTORY:
-                self.document["concept_mapping"][target_table]["history"] = messages
-
-        summary = self.document["concept_mapping"][target_table]["summary"]
-
-        print(f"""💡 {BOLD}Plan to map attributes from source to target table:{END}""")
-        
-
-        def display_mapping(summary):
-            for mapping in summary:
-                source_attributes = mapping["source_columns"]
-                target_attributes = mapping["target_columns"]
-                reason = mapping["reason"]
-                print(f"{BOLD}{', '.join(source_attributes)}{END}")
-                print(f"    🤓 Can be mapped to {BOLD}{', '.join(target_attributes)}{END}")
-                print(f"    {ITALIC}{reason}{END}")
-
-                has_warning = False
-                for source_attribute in source_attributes:
-                    warnings = self.doc_df.get_column_warnings(source_attribute)
-                    if warnings:
-                        has_warning = True
-                        print(f"\n    ⚠️ {BOLD}{source_attribute}{END} has Data Quality Issues:")
-                        for idx, warning in enumerate(warnings):
-                            warning_type = warning["type"]
-                            warning_explanation = warning["explanation"]
-                            print(f"        {idx+1}. {BOLD}{warning_type}{END}: {ITALIC}{warning_explanation}{END}")
-                if has_warning:
-                    print(f"    ⚠️ It's recommended to first clean the data before transformation.")
-                print()
-
-        display_mapping(summary)
-
-        submit_button = widgets.Button(
-            description='Next',
-            disabled=False,
-            button_style='',
-            tooltip='Click to submit',
-        )
-
-        def on_submit_button_clicked(b):
-            clear_output(wait=True)
-            next_step(target_table)
-            
-
-        submit_button.on_click(on_submit_button_clicked)
-
-        display(submit_button)
-
-        print(f"""\n⚠️ Some attributes are not supported:""")
-        print(f"""    1. 💭 concept id: vocabulary standardization is under development""")
-        print(f"""    2. 🔗 foreign key: table connection is under development""")
-        print(f"""😊 Please send a feature request if you want them!""")    
-    
-    def write_codes2(self, target_table):
-
-        print("💻 Writing the codes...")
-
-        next_step = self.complete
-
-        concept_mapping = self.document["concept_mapping"][target_table]["summary"]
-
-        progress = self.show_progress(len(concept_mapping))
-
-        for mapping in concept_mapping:
-
-            target_attributes = mapping["target_columns"]
-            
-            potential_attributes = attributes_description[target_table]
-            
-            target_attributes = [attr for attr in target_attributes if attr in potential_attributes]
-
-            if not target_attributes:
-                progress.value += 1
-                continue
-
-            source_attributes = mapping["source_columns"]
-
-            key = str(target_attributes) + str(source_attributes)
-
-            reason = mapping["reason"]
-
-            progress.value += 1
-            
-            if "code_mapping" not in self.document:
-                self.document["code_mapping"] = {}
-            else:
-                if key in self.document["code_mapping"]:
-                    write_log(f"Warning: code_mapping for {key} already exists in the document.")
-                    continue
-
-            source_table_description  = self.doc_df.get_basic_description(sample_cols=source_attributes, cols=source_attributes)
-            
-            codes, messages = write_code_and_debug(key=key, 
-                                                source_attributes=source_attributes, 
-                                                source_table_description=source_table_description, 
-                                                target_attributes=target_attributes, 
-                                                df=self.doc_df.df,
-                                                target_table=target_table)
-
-            for message in messages:
-                write_log(message['content'])
-                write_log("-----------------------------------")
-
-            self.document["code_mapping"][key] = {}
-            self.document["code_mapping"][key]["summary"] = codes
-            if LOG_MESSAGE_HISTORY:
-                self.document["code_mapping"][key]["history"] = messages
-
-        final_node_idx = self.pipeline.find_final_node()
-
-        transform_step_indices = []
-        project_step_indices = []
-
-        sample_df = self.pipeline.run_codes()[:4]
-
-        for mapping in concept_mapping:
-            target_attributes = mapping["target_columns"]
-
-            potential_attributes = attributes_description[target_table]
-            
-            target_attributes = [attr for attr in target_attributes if attr in potential_attributes]
-
-            if not target_attributes:
-                continue
-
-            source_attributes = mapping["source_columns"]
-
-            key = str(target_attributes) + str(source_attributes)
-
-
-            code = self.document["code_mapping"][key]["summary"]
-
-            transform_step = TransformationStep(name = "Column Transformation",
-                                                        explanation=f"""Map from source table {BOLD}{str(source_attributes)}{END} to target table {BOLD}{str(target_attributes)}{END}""", 
-                                                        codes=code, 
-                                                        sample_df=sample_df)
-            
-            
-            step_index = self.pipeline.add_new_step(transform_step)
-            transform_step_indices.append(step_index)
-
-            project_step = ProjectionStep(name = "Column Projection",
-                                          cols=target_attributes)
-
-            step_index = self.pipeline.add_new_step(project_step)
-            project_step_indices.append(step_index)
-
-
-            
-
-        concat_step = ConcatenateHorizontalStep()
-        concat_step_idx = self.pipeline.add_new_step(concat_step)
-
-
-        for transform_step_idx in transform_step_indices:
-            self.pipeline.add_edge_by_index(final_node_idx, transform_step_idx)
-
-        for i in range(len(transform_step_indices)):
-            self.pipeline.add_edge_by_index(transform_step_indices[i], 
-                                            project_step_indices[i])
-        
-        for project_step_idx in project_step_indices:
-            self.pipeline.add_edge_by_index(project_step_idx, concat_step_idx)
-
-        self.pipeline.display()
-
-    def print_codes(self):
-        self.pipeline.print_codes()
-    
-    def run_codes(self):
-        return self.pipeline.run_codes()
-
-    def decide_one_one_table(self, target_table):
-
-        next_step = self.concept_mapping
-
-        if "one_to_one" not in self.document:
-            self.document["one_to_one"] = {}
-
-        if target_table in self.document["one_to_one"]:
-            write_log(f"Warning: {target_table} already exists in the document for one_to_one.")
-        else:
-            print("🤓 Identifying the row mapping...")
-
-            progress = self.show_progress(1)
-
-
-            source_table_description = self.doc_df.document["table_summary"]["summary"]
-            source_table_sample = self.doc_df.get_sample_text()
-            target_table_description = table_description[target_table]
-            target_table_sample = table_samples[target_table]
-            transform_reason = self.document["main_table"]["summary"][target_table]
-            
-            summary, messages = decide_one_one(source_table_description, source_table_sample, target_table_description, target_table_sample, transform_reason)
-            progress.value += 1
-
-            for message in messages:
-                write_log(message['content'])
-                write_log("-----------------------------------")
-
-            if not isinstance(summary["1:1"], bool):
-                raise ValueError(f"summary['1:1'] is not a boolean.")
-            
-            self.document["one_to_one"][target_table] = {}
-            self.document["one_to_one"][target_table]["summary"] = summary
-            if LOG_MESSAGE_HISTORY:
-                self.document["one_to_one"][target_table]["history"] = messages
-
-        summary = self.document["one_to_one"][target_table]["summary"]
-
-        if summary["1:1"]:
-            next_step(target_table)
-        else:
-            display(HTML(f"☹️ <b>Source doesn't have 1-1 row mapping with Target:</b> " + summary["reason"]))
-            print("😊 M-N row mapping is under development. Please send a feature request!")
-        
-
-
-    def decide_main_table(self):
-
-        next_step = self.decide_one_one_table
-
-
-        json_code = self.document["main_table"]["summary"]
-
-
-        source_table_description = self.doc_df.document["table_summary"]["summary"]
-        source_table_description = replace_asterisks_with_tags(source_table_description)
-
-        display(HTML(f"<b>Source table</b> " + source_table_description))
-                    
-
-        if json_code:
-            print("💡 Below are potential tables to transform to.")
-
-            for key in json_code:
-                print(f'    {BOLD}{key}{END}: {json_code[key]}')
-
-            print("🤓 Please choose one table to transform to.")
-
-            radio_options = widgets.RadioButtons(
-                options=list(json_code.keys()) + ['Manually Specify'],
-                description='',
-                disabled=False
-            )
-        else:
-            print(f"🙁 It doesn't seem to be related to any table in common data model. \n🤓 Please manually specify the \033[1mmost\033[0m related table.")
-            radio_options = widgets.RadioButtons(
-                options=['Manually Specify'],
-                description='',
-                disabled=False
-            )
-
-        dropdown = widgets.Dropdown(
-            options=self.tables,
-            description='',
-            disabled= (True if json_code else False),
-            layout={'display': 'none' if json_code else ''}  
-        )
-
-        def on_radio_selection_change(change):
-            if change['new'] == 'Manually Specify':
-                dropdown.disabled = False
-                dropdown.layout.display = ''
-            else:
-                dropdown.disabled = True
-                dropdown.layout.display = 'none'
-
-        radio_options.observe(on_radio_selection_change, names='value')
-
-        submit_button = widgets.Button(
-            description='Submit',
-            disabled=False,
-            button_style='',
-            tooltip='Click to submit',
-        )
-
-        def on_submit_button_clicked(b):
-            if radio_options.value == 'Manually Specify':
-                main_table = dropdown.value
-            else:
-                main_table = radio_options.value
-
-            clear_output(wait=True)
-
-            next_step(main_table)
-            
-
-        submit_button.on_click(on_submit_button_clicked)
-
-        container = widgets.VBox([radio_options, dropdown, submit_button])
-
-        display(container)
-
-    def write_codes(self):
-        
-        next_step = self.complete
-
-        print("💻 Writing the codes...")
-
-        return
-
-        concept_mapping = self.document["concept_mapping"]
-        
-        source_concepts = self.doc_df.document["column_grouping"]["summary"]
-
-        target_to_source = {}
-
-        for key, value in concept_mapping.items():
-            source_path = key.strip("[]").replace("'", "").split(", ")
-            
-            if "summary" in value:
-                for summary_mapping in value["summary"]:
-                    target_path = str(summary_mapping)
-                    if target_path not in target_to_source:
-                        target_to_source[target_path] = source_path
-                    else:
-                        target_to_source[target_path].append(source_path)
-
-        progress = self.show_progress(len(target_to_source))
-
-        for key, source_path in target_to_source.items():
-            target_path = key.strip("[]").replace("'", "").split(", ")
-            target_attributes = get_value_from_path(target_concepts, target_path)
-            source_attributes = get_value_from_path(source_concepts, source_path)
-
-            progress.value += 1
-            
-            if "code_mapping" not in self.document:
-                self.document["code_mapping"] = {}
-            else:
-                if key in self.document["code_mapping"]:
-                    write_log(f"Warning: code_mapping for {key} already exists in the document.")
-                    continue
-            
-            self.write_code_single(key, source_attributes, target_attributes)
-
-        self.target_df = pd.DataFrame()    
-
-        for key, source_path in target_to_source.items():
-            target_path = key.strip("[]").replace("'", "").split(", ")
-            target_attributes = get_value_from_path(target_concepts, target_path)
-            source_attributes = get_value_from_path(source_concepts, source_path)
-
-
-            print(f"""Codes that map 
-# from source table {BOLD}{str(source_path)}{END} ({ITALIC}{str(source_attributes)}{END})
-# to target table {BOLD}{str(target_path)}{END} ({ITALIC}{str(target_attributes)}{END})""")
-
-            code = self.document["code_mapping"][key]
-            print()
-            print("-" * 80) 
-            print(highlight(code, PythonLexer(), Terminal256Formatter()))
-            print("-" * 80) 
-            print()
-
-            
-            exec(code, globals())
-            temp_target_df = etl(self.doc_df.df)
-            for col in temp_target_df.columns:
-                self.target_df[col] = temp_target_df[col]
-
-        
-    
-    def write_code_single(self, key, source_attributes, target_attributes):
-
-        target_attributes = "\n".join(f"{idx + 1}. {target_attribute}: {attributes_description[target_attribute]}" for idx, target_attribute in enumerate(target_attributes))
-
-        template =  f"""ETL task: Given Source Table, tansform it into Target Table with new columns. 
-
-Source table:
-{self.doc_df.get_basic_description(sample_cols=source_attributes, cols=source_attributes)}
-
-The target table needs columns:
-{target_attributes}
-
-Do the following:
-1. First reason about how to extract the columns
-2. Then fill in the python function with detailed comments.
-```python
-def etl(source_df):
-    target_df = pd.DataFrame()
-    ...
-    return target_df
-```"""
-
-        messages = [{"role": "user", "content": template}]
-
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-
-        write_log(template)
-        write_log("-----------------------------------")
-        write_log(response['choices'][0]['message']['content'])
-
-        python_code = extract_python_code(response['choices'][0]['message']['content'])
-
-        detailed_error_info = None
-
-        max_tries = 2
-
-        while max_tries > 0:
-            max_tries -= 1
-
-            try:
-                exec(python_code, globals())
-                temp_target_df = etl(self.doc_df.df)
-            except Exception: 
-                detailed_error_info = get_detailed_error_info()
-
-            if detailed_error_info is None:
-                self.document["code_mapping"][key] = python_code
-                return
-
-
-            error_message = f"""There is a bug in the code: {detailed_error_info}.
-First, study the error message and point out the problem.
-Then, fix the bug and return the codes in the following format:
-```python
-def etl(source_df):
-    target_df = pd.DataFrame()
-    ...
-    return target_df
-```"""
-            messages = [{"role": "user", "content":template},
-            {"role": "assistant", "content": python_code},
-            {"role": "user", "content": error_message},]
-
-            response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-
-            write_log(error_message)
-            write_log("-----------------------------------")
-            write_log(response['choices'][0]['message']['content'])
-
-            python_code = extract_python_code(response['choices'][0]['message']['content'])
-    
-        raise Exception("The code is not correct. Please try again.")
-
-
-    def map_concept(self):
-
-        next_step = self.write_codes
-
-        print("Mapping the concepts...")
-
-        target_concept = {self.document["main_table"]["summary"]["concept"]:
-                            target_concepts[self.document["main_table"]["summary"]["concept"]]}
-
-        def dict_to_descriptive_list(data_dict, parent_keys=None):
-            if parent_keys is None:
-                parent_keys = []
-
-            descriptive_map = {}
-
-            for key, value in data_dict.items():
-                current_keys = parent_keys + [key]
-
-                if isinstance(value, dict):
-                    descriptive_map.update(dict_to_descriptive_list(value, current_keys))
-                elif isinstance(value, list):
-                    keys_path = '[' + ', '.join(current_keys) + ']'
-                    
-                    attributes = ', '.join(value)
-
-                    description = f"{keys_path}, with {len(value)} attributes: {attributes}"
-
-                    descriptive_map[str(current_keys)] = description
-
-            return descriptive_map
-        
-        source_concept = dict_to_descriptive_list(self.doc_df.document["column_grouping"]["summary"])
-
-        progress = self.show_progress(len(source_concept))
-
-        for keys_path in source_concept:
-            description = source_concept[keys_path]
-
-            if "concept_mapping" not in self.document:
-                self.document["concept_mapping"] = {}
-            else:
-                if keys_path in self.document["concept_mapping"]:
-                    write_log(f"Warning: concept_mapping for {keys_path} already exists in the document.")
-                    continue
-
-            self.map_concept_single(keys_path, description, target_concept)
-
-            progress.value += 1
-
-        clear_output(wait=True)
-
-        source_concepts = self.doc_df.document["column_grouping"]["summary"]
-
-        concept_mapping = self.document["concept_mapping"]
-
-
-
-        def display_mapping(concept_mapping, target_concepts, source_concepts):
-            results = []
-
-            for key, value in concept_mapping.items():
-                source_path = key.strip("[]").replace("'", "").split(", ")
-                
-                source_attributes = get_value_from_path(source_concepts, source_path)
-                
-                print(f"{BOLD}{'->'.join(source_path)}{END} ({ITALIC}{', '.join(source_attributes)}{END})")
-                if "summary" in value:
-                    for summary_mapping in value["summary"]:
-                        target_path = summary_mapping
-                        target_attributes = get_value_from_path(target_concepts, target_path)
-                        matching_source_attributes = ", ".join(summary_mapping[-3:])
-                        print(f"    Can be mapped to {BOLD}{'->'.join(target_path)}{END} ({ITALIC}{', '.join(target_attributes)}{END}) attributes.")
-                else:
-                    print(f"    Can't be used for any attributes.")
-
-
-        display_mapping(concept_mapping, target_concepts, source_concepts)
-        
-        submit_button = widgets.Button(
-            description='Next',
-            disabled=False,
-            button_style='',
-            tooltip='Click to submit',
-        )
-
-        def on_submit_button_clicked(b):
-            
-            clear_output(wait=True)
-
-            next_step()
-            
-
-        submit_button.on_click(on_submit_button_clicked)
-
-        display(submit_button)
-
-    def map_concept_single(self, keys_path, description, target_concept):
-
-        key_path_list = keys_path.strip("[]").replace("'", "").split(", ")
-
-        def extract_paths(data, path=None, results=None):
-            if path is None:
-                path = []
-            if results is None:
-                results = []
-
-            for key, value in data.items():
-                new_path = path + [key]
-                if isinstance(value, dict):
-                    extract_paths(value, new_path, results)
-                elif isinstance(value, list):
-                    results.append(new_path)
-
-            return results
-
-        paths = extract_paths(target_concept)
-
-        paths_str = "\n".join(f"{idx + 1}. {item}" for idx, item in enumerate(paths))
-
-        template = f"""You have list of target concepts about {list(target_concept.keys())[0]}. Each concept is a list from category to specifics:
-{paths_str}
-
-You have a source table about: {description}. 
-The goal is to transform from source to target.
-
-Enumerate the target concepts that the source table can be potentially mapped to, in the following format (empty list if no relevant):
-```json
-[["{list(target_concept.keys())[0]}",...,"Leaf Category"], 
-  ["{list(target_concept.keys())[0]}", ...]...]
-```"""
-        messages = [{"role": "user", "content": template}]
-
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-
-        write_log(template)
-        write_log("-----------------------------------")
-        write_log(response['choices'][0]['message']['content'])
-
-        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
-        json_code = json.loads(processed_string)
-
-
-        
-        if len(json_code) == 0:
-            self.document["concept_mapping"][keys_path] = {}
-            return
-
-
-        
-        result = "\n".join(f'{idx + 1}. {path}: {get_value_from_path(target_concept, path)}' for idx, path in enumerate(json_code))
-
-        template = f"""You have list of target concepts about {list(target_concept.keys())[0]}. Each concept is a list from category to specifics:
-{result}
-
-You have a source table about: {description}. 
-**Assumption: {list(target_concept.keys())[0]} is semantically similar or more general to {key_path_list[0]}!!**
-
-Exclude target concepts that are obviously semantically different.
-E.g., ["Person", "birth date"] and ["Patient, "death date"]
-"birth date" and "death date", despite both are about date, are obviously different.
-Sometimes, the difference is not obvious. E.g., "birth date" and "birth year" are the same.
-
-Based on the assumption, exclude the conpets that are obviously different, but keep the ones that are unsure.
-Return the remaining concepts in the following format (empty list if no).
-```json
-[["{list(target_concept.keys())[0]}",...,"Leaf Category"], 
-  ["{list(target_concept.keys())[0]}", ...]...]
-```"""
-
-        messages = [{"role": "user", "content": template}]
-        
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-        
-        write_log(template)
-        write_log("-----------------------------------")
-        write_log(response['choices'][0]['message']['content'])
-
-        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
-        json_code = json.loads(processed_string)
-
-
-        
-        if len(json_code) == 0:
-            self.document["concept_mapping"][keys_path] = {}
-            return
-        
-
-
-        
-        result = "\n".join(f'{idx + 1}. {path}: {get_value_from_path(target_concept, path)}' for idx, path in enumerate(json_code))
-
-        template = f"""You have list of target concepts about {list(target_concept.keys())[0]}. Each concept is a list from category to specifics. The right side is its attributes:
-{result}
-
-You have a source table about: {description}. 
-First, go through the attributes of target concept. Argue if any can be transformed from the source table.
-E.g., "Student height" cannot be transformed from "Student weight" as they are different measurements.
-E.g., "Student age" can be transformed from "Student birth date" by calculating the date difference.
-
-Then, enumerate the target concept where there exists attributes can be transformed (empty list if no):
-```json
-[["{list(target_concept.keys())[0]}",...,"Leaf Category"], 
-  ["{list(target_concept.keys())[0]}", ...]...]
-```"""
-        messages = [{"role": "user", "content": template}]
-        
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1) 
-        
-        write_log(template)    
-        write_log("-----------------------------------")
-        write_log(response['choices'][0]['message']['content'])
-        
-        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
-        json_code = json.loads(processed_string)
-
-
-
-        self.document["concept_mapping"][keys_path] = {}
-
-        if len(json_code) == 0:    
-            return
-        
-        self.document["concept_mapping"][keys_path]["summary"] = json_code
-    
 
 
 
@@ -6073,77 +1582,6 @@ def combine_pipelines(pipelines):
         offset += len(pipeline.steps)
 
     return TransformationPipeline(new_steps, new_edges)
-
-def find_instance_index(instance_list, target_instance):
-    for idx, instance in enumerate(instance_list):
-        if instance is target_instance:
-            return idx
-    return -1
-
-
-
-
-def find_final_node(steps, edges):
-
-    node_set = set(range(len(steps)))
-
-    nodes_with_no_outgoing = {node for node, targets in edges.items() if len(targets) == 0}
-    
-    nodes_not_in_edges = node_set - set(edges.keys())
-
-    potential_final_nodes = nodes_with_no_outgoing.union(nodes_not_in_edges)
-
-    if len(potential_final_nodes) != 1:
-        return None
-
-    final_node = potential_final_nodes.pop()
-
-    for node in node_set:
-        if node == final_node:
-            continue
-        if not find_path(edges, node, final_node):
-            return None
-
-    return final_node
-
-
-def find_source_node(nodes, edges):
-    if not edges and len(nodes) == 1:
-        return 0
-
-    all_nodes_with_outgoing = set(edges.keys())
-
-    nodes_with_incoming = set()
-    for targets in edges.values():
-        nodes_with_incoming.update(targets)
-
-    source_candidates = all_nodes_with_outgoing - nodes_with_incoming
-
-    if len(source_candidates) == 1:
-        return source_candidates.pop()
-    else:
-        return None
-
-
-
-
-def find_path(edges, start, end, visited=None):
-    if visited is None:
-        visited = set()
-
-    if start == end:
-        return True
-    if start in visited:
-        return False
-
-    visited.add(start)
-
-    for neighbor in edges.get(start, []):
-        if find_path(edges, neighbor, end, visited):
-            return True
-
-    return False
-
 
 
 
@@ -11566,749 +7004,6 @@ def join_raster_to_df_points(raster_shape, df_shape):
     return result
 
 
-class NestDocument(dict):
-    def get_nested(self, path):
-        current_dict = self
-        for key in path:
-            if key not in current_dict:
-                return {}
-            current_dict = current_dict[key]
-
-        return current_dict
-
-    def exist_nested(self, path):
-        current_dict = self
-        for key in path:
-            if key not in current_dict:
-                return False
-            current_dict = current_dict[key]
-
-        return True
-
-    def set_nested(self, path, value):
-        current_dict = self
-        for key in path[:-1]:
-            if key not in current_dict:
-                current_dict[key] = {}
-            current_dict = current_dict[key]
-        current_dict[path[-1]] = value 
-    
-    def remove_nested(self, path):
-        current_dict = self
-        for key in path[:-1]:
-            if key not in current_dict:
-                return
-            current_dict = current_dict[key]
-        if path[-1] in current_dict:
-            del current_dict[path[-1]]
-            
-
-
-
-
-
-
-
-
-
-
-
-class Node:
-    default_name = "Node"
-    default_description = "This is the base class for all nodes."
-    retry_times = 3
-
-    def __init__(self, name=None, description=None, viewer=False, item=None, 
-                 para=None, output=None, id_para="element_name", class_para = {}):
-        self.name = name if name is not None else self.default_name
-        self.description = description if description is not None else self.default_description
-
-        self.para = para if para is not None else {}
-        self.item = item
-        self.viewer = viewer
-
-        self.nodes = {self.name: self}
-        self.edges = {}
-
-        self.messages = []
-        
-        self.global_document = NestDocument()
-        self.id_para = id_para
-        self.init_path()
-
-        self.output = output
-        self.class_para = class_para
-        
-    
-    @contextmanager
-    def output_context(self):
-        if hasattr(self, 'output') and self.output is not None:
-            with self.output:
-                yield
-        else:
-            yield
-
-    def init_path(self):
-        self.path = [self.name]
-        if self.id_para  in self.para:
-            self.path.append(str(self.para[self.id_para]))
-
-    def add_parent_path(self, parent_path):
-        self.path = parent_path + self.path
-
-    def add_parent_document(self, parent_document):
-        self.global_document = parent_document
-
-    def inherit(self, parent):
-        self.add_parent_path(parent.path)
-        self.add_parent_document(parent.global_document)
-
-        if self.output is None:
-            self.output = parent.output
-
-        if not self.para:
-            self.para = parent.para
-        
-        if not self.item:
-            self.item = parent.item
-        
-        self.parent_node = parent
-    
-    def get_sibling_node(self, sibling_name):
-        return self.parent_node.nodes[sibling_name]
-
-    def set_global_document(self, value):
-        self.global_document.set_nested(self.path, value)
-
-    def get_global_document(self):
-        return self.global_document.get_nested(self.path)
-
-    def exist_global_document(self):
-        return self.global_document.exist_nested(self.path)
-    
-    def remove_global_document(self):
-        self.global_document.remove_nested(self.path)
-        
-
-    def to_html(self):
-        html_content = f"<h2>{self.name}</h2>"
-        html_content += f"<p>{self.description}</p>"
-        return html_content
-
-    def display_document(self):
-        if self.global_document is not None:
-            display(HTML(f"<h3>Document</h3>" + render_json_in_iframe_with_max_height(self.global_document)))
-        else:
-            display(HTML(f"<h3>Document</h3><p>Document is empty.</p>"))
-
-    def display_messages(self):
-        if len(self.messages) > 0:
-            if isinstance(self.messages[0], list):
-
-                def create_html_content(page_no):
-                    html_content = generate_dialogue_html(self.messages[page_no])
-                    return wrap_in_scrollable_div(html_content, height="500px", width="800px")
-                display(HTML(f"<h3>Message History</h3>"))
-                display_pages(len(self.messages), create_html_content)
-
-            else:
-                html_content = generate_dialogue_html(self.messages)
-                display(HTML(f"<h3>Message History</h3>" 
-                            + wrap_in_scrollable_div(html_content, height="500px")))
-
-            
-
-    def display(self, call_back_list=None):
-        
-        if call_back_list is None:
-            call_back_list = []
-        
-        display(HTML(self.to_html()))
-
-        self.display_document()
-        self.display_messages()
-
-        if len(call_back_list) > 0:
-            button = widgets.Button(description="Return")
-
-            def on_button_clicked(b):
-                with self.output_context():
-                    clear_output(wait=True)
-                    call_back_func = call_back_list.pop()
-                    call_back_func(call_back_list)
-
-            button.on_click(on_button_clicked)
-            display(button)
-
-    def extract(self, input_item):
-        self.input_item = input_item
-
-        return None
-
-    def run(self, extract_output, use_cache=True):
-        if cocoon_main_setting['DEBUG_MODE']:
-            print(f"Running {self.name}.")
-        return extract_output
-    
-    def run_but_fail(self, extract_output, use_cache=True):
-        return {}
-        
-    
-    def run_and_retry(self, extract_output):
-        try:
-            return self.run(extract_output, use_cache=True)
-        except Exception as e:
-            print(f"😲 Failed to run {self.name}...")
-            write_log(f"""
-The node is {self.name}
-The error is: {e}
-The messages are:
-{self.messages}""")
-            
-            if cocoon_main_setting['DEBUG_MODE']:
-                raise e
-            
-            for i in range(self.retry_times):
-                try:           
-                    print(f"🕗 Waiting for 10s before retrying...")
-                    time.sleep(10)  
-                    return self.run(extract_output, use_cache=False)
-                except Exception as e:
-                    print(f"😔 Failed to run {self.name}...")
-                    
-                    write_log(f"""
-The node is {self.name}
-The error is: {e}
-The messages are:
-{self.messages}""")
-                
-            
-                    
-            print(f"😔 Failed to run {self.name}. Please send us the error log (error_log.txt).")
-            return self.run_but_fail(extract_output, use_cache=False)
-            
-    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        self.run_output = run_output
-        
-        if cocoon_main_setting['DEBUG_MODE']:
-            print(f"Postprocessing {self.name}.")
-
-        document = run_output
-        
-        def on_button_click(b):
-            with self.output_context():
-                print("Button clicked.")
-                callback(document)
-        
-        button = Button(description="Submit")
-        button.on_click(on_button_click)
-        display(button)
-
-        if viewer:
-            on_button_click(button)
-
-
-    def get_sibling_document(self, sibling_name):
-        new_path = self.path[:-1]
-        new_path.append(sibling_name)
-
-        return self.global_document.get_nested(new_path)
-    
-    def get_multi_node_parent_sibling_document(self, sibling_name):
-        new_path = self.path[:-3]
-        new_path.append(sibling_name)
-
-        return self.global_document.get_nested(new_path)
-
-
-class ListNode(Node):
-    default_name = "List of Nodes"
-    default_description = "This node dynamically creates a list of run calls."
-    retry_times = 3
-    
-    def run(self, extract_output, use_cache=True):
-        return {}
-    
-    def merge_run_output(self, run_outputs):
-        return run_outputs
-    
-    def run_and_retry(self, extract_outputs):
-        run_outputs = []
-        for extract_output in extract_outputs:
-            run_output = super().run_and_retry(extract_output)
-            run_outputs.append(run_output)
-        return self.merge_run_output(run_outputs)
-    
-class Workflow(Node):
-
-    default_name = "Workflow"
-    default_description = "This is the base class for all workflows."
-
-    def __init__(self, name=None, description=None, viewer=False, item=None, para=None, 
-                 output=None, id_para="element_name", class_para=None):
-        self.name = name if name is not None else self.default_name
-        self.description = description if description is not None else self.default_description
-        self.nodes = {}
-        self.edges = {}
-        self.item = item
-
-        if para is None:
-            para = {}
-        self.para = para
-        
-        self.root_node = None
-        self.viewer = viewer
-        self.messages = []
-        
-        self.global_document = NestDocument()
-        self.id_para = id_para
-        self.init_path()
-
-        self.output = output
-        if class_para is None:
-            class_para = {}
-        self.class_para = class_para
-
-
-    def extract(self, item):
-        self.item = item
-        return None
-
-    def run(self, extract_output, use_cache=True):
-        return None
-
-    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-
-        self.finish_workflow = callback
-
-        print(f"Starting workflow {self.name}.")
-        self.start_workflow()
-
-        
-    def write_document_to_disk(self, filepath: str):
-        with open(filepath, 'w', encoding="utf-8") as file:
-            json.dump(self.global_document, file)
-
-    def read_document_from_disk(self, filepath: str, viewer=True):
-        with open(filepath, 'r', encoding="utf-8") as file:
-            self.global_document = json.load(file)
-
-    def update_node(self, new_node):
-        node_name = new_node.name
-        if node_name not in self.nodes:
-            raise ValueError(f"Node {node_name} not found.")
-        
-        self.nodes[node_name] = new_node
-
-        new_node.inherit(self)
-        new_node.remove_global_document()
-        
-    def add_as_root(self, node):
-        nodes, edges = list(self.nodes.keys()), self.edges 
-        
-        if len(nodes) == 0:
-            self.register(node)
-            return
-        
-        self.register(node, children=[self.root_node])
-
-    def add_to_leaf(self, node):
-        nodes, edges = list(self.nodes.keys()), self.edges 
-
-        if len(nodes) == 0:
-            self.register(node)
-            return
-
-        edges = replace_keys_and_values_with_index(nodes, edges)
-        final_node_idx = find_final_node(nodes, edges)
-
-        if final_node_idx is not None:
-            final_node = nodes[final_node_idx]
-            self.register(node, parent=final_node)
-        else:
-            raise ValueError("No leaf node found. Please manually add the node.")        
-
-    def register(self, node, parent=None, children=None):
-        
-        if children is None:
-            children = []
-            
-        if isinstance(parent, Node):
-            parent = parent.name
-
-        if node.name in self.nodes:
-            raise ValueError(f"Node {node.name} is already registered.")
-        
-        for child in children:
-            if child not in self.nodes:
-                raise ValueError(f"Child node {child} not found.")
-        
-        if parent:
-            if parent not in self.nodes:
-                raise ValueError(f"Parent node {parent} not found.")
-            if parent in self.edges:
-                self.edges[parent].append(node.name)
-            else:
-                self.edges[parent] = [node.name]
-        else:
-            if self.root_node is not None and self.root_node not in children:
-                raise ValueError("A root node is already registered. Only one root node is allowed.")
-            self.root_node = node.name
-    
-        self.nodes[node.name] = node
-        node.inherit(self)
-        self.edges[node.name] = children
-
-    def start_workflow(self):
-        if self.root_node is None:
-            raise ValueError("Workflow has no root node defined.")
-        
-        self.execute_node(self.root_node)
-        
-    def start(self):
-        if self.output is not None:
-            display(self.output)
-            
-        with self.output_context():
-            self.execute_node(self.root_node)
-        
-    def execute_node(self, node_name):
-        if node_name not in self.nodes:
-            raise ValueError(f"Node {node_name} not found.")
-            
-        node = self.nodes[node_name]
-
-        if node.exist_global_document():
-            document = node.get_global_document()
-            print(f"Node {node_name} already executed. Skipping.")
-            self.callback(node_name, document)
-            return 
-
-        extract_output = node.extract(self.item)
-        run_output = node.run_and_retry(extract_output)
-
-        node.postprocess(run_output, lambda document: self.callback(node_name, document), viewer=self.viewer, extract_output=extract_output)
-    
-    def callback(self, node_name, document):
-        node = self.nodes[node_name]
-
-        node.set_global_document(document)
-        
-        children = self.edges.get(node_name, [])
-        
-        def finish_this_workflow():
-            this_document = self.get_global_document()
-            self.finish_workflow(this_document)
-            
-        if "next_node" in document:
-            next_node = document.get("next_node")
-
-            if next_node == "COCOON_END_WORKFLOW":
-                finish_this_workflow()
-            
-            elif next_node and next_node in children:
-                print(f"Proceeding to the specified next node: {next_node}")
-                self.execute_node(next_node)
-                
-            else:
-                raise ValueError(f"Node {node_name} specified an invalid 'next_node'.")
-        
-        elif len(children) == 0:
-            finish_this_workflow()
-
-        elif len(children) == 1:
-            next_node = children[0]
-            if cocoon_main_setting['DEBUG_MODE']:
-                print(f"Automatically proceeding to the next node: {next_node}")
-            self.execute_node(next_node)
-
-        else:
-            raise ValueError(f"Node {node_name} has multiple possible next nodes. 'next_node' must be specified in the document.")
-    
-    def finish_workflow(self, document=None):
-        if cocoon_main_setting['DEBUG_MODE']:
-            print(f"Workflow {self.name} completed.")
-
-    def display_workflow(self):
-        nodes, edges = list(self.nodes.keys()), self.edges 
-
-        edges = replace_keys_and_values_with_index(nodes, edges)
-        
-        self.display_document()
-        display(HTML(f"<h3>Flow Diagram</h3>"))
-        display_workflow(nodes, edges)
-        
-    def display(self, call_back_list=None):
-        
-        if call_back_list is None:
-            call_back_list = []
-
-        display(HTML(self.to_html()))
-        
-
-        def create_widget(nodes, instances):
-            
-            dropdown = widgets.Dropdown(
-                options=nodes,
-                disabled=False,
-            )
-
-            button1 = widgets.Button(description="View")
-
-            def on_button_clicked(b):
-                with self.output_context():
-                    clear_output(wait=True)
-
-                    idx = nodes.index(dropdown.value)
-                    selected_instance = instances[idx]
-
-                    call_back_list.append(self.display)
-                    selected_instance.display(call_back_list=call_back_list)
-
-            button1.on_click(on_button_clicked)
-
-            button3 = widgets.Button(description="Return")
-
-            def on_button_clicked3(b):
-                with self.output_context():
-                    clear_output(wait=True)
-                    call_back_func = call_back_list.pop()
-                    call_back_func(call_back_list)
-            
-            button3.on_click(on_button_clicked3)
-
-            if len(nodes) == 0:
-                display(HTML(f"<p>The workflow is empty.</p>"))
-                
-                if len(call_back_list) > 0:
-                    display(button3)
-
-            else:
-                self.display_workflow()
-
-                if len(call_back_list) > 0:
-                    buttons = widgets.HBox([button1, button3])
-                else:
-                    buttons = widgets.HBox([button1])
-
-                display(dropdown, buttons)
-
-
-        nodes = list(self.nodes.keys())
-        instances = list(self.nodes.values())
-        create_widget(nodes, instances)
-
-
-
-class MultipleNode(Workflow):
-
-    default_name = "Multiple Node"
-    default_description = "This node dynamically creates multiple nodes based on the input data."
-
-    def __init__(self, name=None, description=None, viewer=False, item=None, para=None, 
-                 output=None, id_para="element_name", class_para=None):
-        self.name = name if name is not None else self.default_name
-        self.description = description if description is not None else self.default_description
-        self.nodes = {}
-        self.edges = {}
-
-        self.elements = []
-        self.item = item
-        
-        if para is None:
-            para = {}
-        self.para = para
-        self.viewer = viewer
-        self.unit = "element"
-        
-        self.messages = []
-
-        self.global_document = NestDocument()
-        self.id_para = id_para
-        self.init_path()
-
-        self.output = output
-        if class_para is None:
-            class_para = {}
-        self.class_para = class_para
-        
-        self.example_node = self.construct_node("example")
-        
-
-
-    def construct_node(self, element_name, idx=0, total=0):
-        node = Node("Sub Node", para={"element_name": element_name, "idx": idx, "total": total})
-        node.inherit(self)
-        return node
-    
-    def extract(self, item):
-        self.elements = ['element1', 'element2', 'element3']
-        total = len(self.elements)
-        self.nodes = {element: self.construct_node(element, idx, total) for idx, element in enumerate(self.elements)}
-
-        return None
-    
-    def run(self, extract_output, use_cache=True):
-
-        if len(self.elements) != len(set(self.elements)):
-            raise ValueError("Element names must be unique.")
-        
-        return None
-
-    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-
-        self.finish_workflow = partial(self.display_after_finish_workflow, callback)
-
-        print(f"Starting workflow {self.name}.")
-        self.start_workflow(run_output)
-
-    def display_after_finish_workflow(self, callback, document):
-        callback(document)
-
-    def start_workflow(self, meta_info = None):
-        if len(self.elements) == 0:
-            document = self.get_global_document()
-            self.finish_workflow(document)
-            return 
-        
-        
-        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
-            self.multi_node_viewer = True
-        else:
-            self.multi_node_viewer = False
-        
-        
-        if not self.multi_node_viewer:
-            self.execute_node(self.elements[0])
-            
-        else:
-            
-            
-            for element in self.elements:
-                self.execute_node(element)
-
-            document = self.get_global_document()
-            self.finish_workflow(document)
-
-    
-    def callback(self, element_name, document):
-        element_idx = self.elements.index(element_name)
-        element_node = self.nodes[element_name]
-
-        element_node.set_global_document(document)
-
-        if not self.multi_node_viewer:
-            if element_idx == len(self.elements) - 1:
-                document = self.get_global_document()
-                self.finish_workflow(document)
-            else:
-                self.execute_node(self.elements[element_idx + 1])
-
-    def display_workflow(self):
-        nodes, edges = list(self.example_node.nodes.keys()), self.example_node.edges 
-
-        edges = replace_keys_and_values_with_index(nodes, edges)
-
-        def display_workflow_with_unit(nodes, edges, edge_labels=None, highlight_nodes=None, highlight_edges=None, height=400, unit="item"):
-            encoded_image = generate_workflow_html(nodes, edges, edge_labels, highlight_nodes, highlight_edges, height)
-            scrollable_html = f"""
-            <div style="max-height: {height}px; overflow: auto; border: 1px solid #cccccc; position: relative;">
-                <div style="background-color: rgba(255, 255, 255, 0.8); padding: 2px 5px; font-size: 14px; border-bottom: 1px solid #cccccc;">For each {unit}</div>
-                <img src="data:image/png;base64,{encoded_image}" alt="Workflow Diagram" style="display: block; max-width: none; height: auto; margin-top: 5px;">
-            </div>
-            """
-            display(HTML(scrollable_html))
-        
-        self.display_document()
-        display(HTML(f"<h3>Flow Diagram</h3>"))
-        display_workflow_with_unit(nodes, edges, unit=self.unit)
-
-    def display(self, call_back_list=None):
-        
-        if call_back_list is None:
-            call_back_list = []
-
-        display(HTML(self.to_html()))
-        
-
-        def create_widget(nodes, instances):
-            
-            dropdown = widgets.Dropdown(
-                options=nodes,
-                disabled=False,
-                description=self.unit,
-            )
-
-            button1 = widgets.Button(description="View")
-
-            def on_button_clicked(b):
-                with self.output_context():
-                    clear_output(wait=True)
-
-                    idx = nodes.index(dropdown.value)
-                    selected_instance = instances[idx]
-
-                    call_back_list.append(self.display)
-                    selected_instance.display(call_back_list=call_back_list)
-
-            button1.on_click(on_button_clicked)
-
-            button3 = widgets.Button(description="Return")
-
-            def on_button_clicked3(b):
-                with self.output_context():
-                    clear_output(wait=True)
-                    call_back_func = call_back_list.pop()
-                    call_back_func(call_back_list)
-            
-            button3.on_click(on_button_clicked3)
-
-            self.display_workflow()
-
-            if len(nodes) == 0:
-                display(HTML(f"<p>There is no {self.unit}.</p>"))
-                
-                if len(call_back_list) > 0:
-                    display(button3)
-            else:
-                
-
-                if len(call_back_list) > 0:
-                    buttons = widgets.HBox([button1, button3])
-                else:
-                    buttons = widgets.HBox([button1])
-
-                display(dropdown, buttons)
-
-
-        nodes = list(self.nodes.keys())
-        instances = list(self.nodes.values())
-        create_widget(nodes, instances)
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -15413,6 +10108,10 @@ class TransformationSQLPipeline(TransformationPipeline):
         source_steps = [self.steps[source_idx] for source_idx in source_step_indicies]
         return self.steps[step_idx].get_codes(mode=mode, source_steps=source_steps, full=full)
 
+    def is_materialized(self):
+        final_step = self.get_final_step()
+        return final_step is None or getattr(final_step, 'materialized', False)
+
     def get_codes(self, mode="dbt", con=None, para=None):
         if para is None:
             para = {}
@@ -15645,7 +10344,7 @@ def serialize_and_order_tables(foreign_key):
 class DataProject:
     
     
-    def __init__(self):
+    def __init__(self, directory=None):
         self.tables = {}
                 
         self.table_object = {}
@@ -15678,6 +10377,11 @@ class DataProject:
         self.partition_mapping = {}
         
         self.name = ""
+
+        self.directory = directory
+
+    def get_directory(self):
+        return self.directory
 
     def get_name(self):
         return self.name
@@ -15746,13 +10450,70 @@ class DataProject:
         return intro + self.generate_text_join()
         
     def generate_text_join(self):
-        str_join, number_to_table = serialize_and_order_tables(self.foreign_key)
-        self.number_to_table = number_to_table
-        return str_join
-
+        if not hasattr(self, '_str_join') or not hasattr(self, 'number_to_table'):
+            str_join, number_to_table = serialize_and_order_tables(self.foreign_key)
+            self._str_join = str_join
+            self.number_to_table = number_to_table
+        return self._str_join
+    
     def generate_item_text_summary(self, item_id):
         return self.describe_table_in_text(table_input=item_id)
     
+    def create_data_selectbox(self, model_ids=None):
+        all_tables = list(self.number_to_table.items())
+        
+        if model_ids is not None:
+            filtered_tables = [(table_id, table_name) for table_id, table_name in all_tables if table_id in model_ids]
+        else:
+            filtered_tables = all_tables
+
+        options = ["Database Schema"] + [f"{table_id}. {table_name}" for table_id, table_name in filtered_tables]
+        
+        if model_ids:
+            selectbox_key = f"table_select_{'_'.join(map(str, sorted(model_ids)))}"
+        else:
+            selectbox_key = "table_select_all"
+
+        selected_option = st.selectbox("Select a table or view database schema", options=options, key=selectbox_key)
+        
+        if selected_option == "Database Schema":
+            if model_ids is not None:
+                schema_html = self.generate_html_summary(item_ids=model_ids)
+            else:
+                schema_html = self.generate_html_summary()
+            st.components.v1.html(schema_html, height=400, scrolling=True)
+            
+            join_info = self.get_key_info(tables=model_ids)
+            if join_info:
+                st.markdown("*Join Relationship*")
+                join_yaml = yaml.dump(join_info, default_flow_style=False)
+                st.markdown(
+                    f"""
+                    <div style="max-height: 500px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;">
+                    <pre><code class="language-yaml">{join_yaml}</code></pre>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+        elif selected_option != "Select an option":
+            item_id = int(selected_option.split('.')[0])
+            table_name = self.get_item_name_by_id(item_id)
+            
+            if table_name in self.table_object:
+                table_obj = self.table_object[table_name]
+                yml_content = table_obj.create_dbt_schema_yml()
+                st.markdown("*Table and Column catalog prepared by Cocoon*")
+                st.markdown(
+                    f"""
+                    <div style="max-height: 500px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;">
+                    <pre><code class="language-yaml">{yml_content}</code></pre>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            else:
+                st.error(f"No table object found for '{table_name}'")
+                
     def get_item_name_by_id(self, item_id):
         return self.number_to_table.get(item_id)
 
@@ -21420,7 +16181,11 @@ class WriteStageYMLCode(Node):
         contents = []
         table_pipeline = self.para["table_pipeline"]
         old_table_name = table_pipeline.get_source_step().name
-        new_table_name = rename_for_stg(old_table_name)
+        
+        if len(table_pipeline.steps) > 1:
+            new_table_name = rename_for_stg(old_table_name)
+        else:
+            new_table_name = old_table_name
         
         table_name = new_table_name
         con = self.item["con"]
@@ -21451,25 +16216,25 @@ class WriteStageYMLCode(Node):
         contents.append(yml_content)
         
         if "yaml_only" not in self.class_para or not self.class_para["yaml_only"]:
-            
-            sql_query = f'SELECT *'
-            final_table_name = table_pipeline.__repr__(full=False)
-            if final_table_name != new_table_name:
-                sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}"   
-                step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
-                table_pipeline.add_step_to_final(step)
-                
-            formatter = HtmlFormatter(style='default')
-            css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
-            combined_css = css_style + border_style
-            sql_query = table_pipeline.get_codes()
-            highlighted_sql = wrap_in_scrollable_div(highlight(sql_query, SqlLexer(), formatter), height='600px')
-            bordered_content = f'<div class="border-class">{highlighted_sql}</div>'
-            combined_html = combined_css + bordered_content
-            tab_data.append(("sql", combined_html))
-            labels.append("SQL")
-            file_names.append(f"{new_table_name}.sql")
-            contents.append(sql_query)
+            if len(table_pipeline.steps) > 1:
+                sql_query = f'SELECT *'
+                final_table_name = table_pipeline.__repr__(full=False)
+                if final_table_name != new_table_name:
+                    sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}"   
+                    step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
+                    table_pipeline.add_step_to_final(step)
+                    
+                formatter = HtmlFormatter(style='default')
+                css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+                combined_css = css_style + border_style
+                sql_query = table_pipeline.get_codes()
+                highlighted_sql = wrap_in_scrollable_div(highlight(sql_query, SqlLexer(), formatter), height='600px')
+                bordered_content = f'<div class="border-class">{highlighted_sql}</div>'
+                combined_html = combined_css + bordered_content
+                tab_data.append(("sql", combined_html))
+                labels.append("SQL")
+                file_names.append(f"{new_table_name}.sql")
+                contents.append(sql_query)
 
         try:
             if (hasattr(self, 'para') and 
@@ -21841,26 +16606,32 @@ class CreateShortTableSummary(Node):
         create_progress_bar_with_numbers(0, doc_steps)
         self.progress = show_progress(1)
         
-        sample_size = 5
-
         schema = table_pipeline.get_schema(con)
         columns = list(schema.keys())
-        sample_df = table_pipeline.get_samples(con, columns=columns, sample_size=sample_size)
-        sample_df = sample_df.applymap(truncate_cell)
-        table_desc = sample_df.to_csv(index=False, quoting=1)
         
-        source_name =  table_pipeline.get_source_step().name
+        access_control = self.para['cocoon_stage_options'].get('description_access_control', 'Schema Only Access')
+        
+        if access_control == 'Read Data Access':
+            sample_size = 5
+            sample_df = table_pipeline.get_samples(con, columns=columns, sample_size=sample_size)
+            sample_df = sample_df.applymap(truncate_cell)
+            table_desc = sample_df.to_csv(index=False, quoting=1)
+        else:
+            table_desc = ", ".join(columns)
+        
+        source_name = table_pipeline.get_source_step().name
 
-        return table_pipeline, table_desc, source_name
+        return table_pipeline, table_desc, source_name, access_control
     
     def run(self, extract_output, use_cache=True):
-        table_name, table_desc, source_name = extract_output
+        table_name, table_desc, source_name, access_control = extract_output
         
         table_object = self.para.get("table_object")
         if table_object and hasattr(table_object, 'table_summary') and table_object.table_summary:
             return table_object.table_summary
         
-        template = f"""You have the table '{source_name}' with samples:
+        if access_control == 'Read Data Access':
+            template = f"""You have the table '{source_name}' with samples:
 {table_desc}
 
 Summarize the table. If it is a relation with multiple entities, explains how they are related.
@@ -21878,9 +16649,28 @@ table_summary: >-
     The table is about the orders made by customers...
 ```
 """
+        else:
+            template = f"""You have the table '{source_name}' with the following columns:
+{table_desc}
+
+Based on the column names, summarize what this table might represent. If it appears to be a relation with multiple entities, explain how they might be related.
+If it seems to represent a single entity, explain what details it might contain.
+
+Example: 
+The table appears to be a relation between xx and yy, likely containing...
+The table seems to be about x, possibly containing details such as...
+
+Now, provide your summary in short simple SVO sentences and < 500 chars
+Return in the following format:
+```yml
+reasoning: It appears to have single entity/multiple entities ...
+table_summary: >-
+    The table likely represents orders made by customers...
+```
+"""
 
         messages = [{"role": "user", "content": template}]
-        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
 
         summary = response['choices'][0]['message']['content']
         assistant_message = response['choices'][0]['message']
@@ -21901,7 +16691,7 @@ table_summary: >-
 
         self.progress.value += 1
 
-        table_name, _, _ = extract_output
+        table_name, _, _, _ = extract_output
         query_widget = self.item["query_widget"]
 
         create_explore_button(query_widget, table_name)
@@ -22464,24 +17254,28 @@ class DescribeColumnsList(ListNode):
 
         schema = table_pipeline.get_schema(con)
         columns = list(schema.keys())
-        sample_size = 5
         
         table_summary = self.get_sibling_document("Create Short Table Summary")
         
-        outputs = []
+        access_control = self.para['cocoon_stage_options'].get('description_access_control', 'Schema Only Access')
         
+        outputs = []
         
         for i in range(0, len(columns), 30):
             chunk_columns = columns[i:i + 30]
-            sample_df = table_pipeline.get_samples(con, columns=chunk_columns, sample_size=sample_size)
-            sample_df = sample_df.applymap(truncate_cell)
-            table_desc = sample_df.to_csv(index=False, quoting=1)
-            outputs.append((table_desc, table_summary, chunk_columns, i))
+            if access_control == 'Read Data Access':
+                sample_size = 5
+                sample_df = table_pipeline.get_samples(con, columns=chunk_columns, sample_size=sample_size)
+                sample_df = sample_df.applymap(truncate_cell)
+                table_desc = sample_df.to_csv(index=False, quoting=1)
+            else:
+                table_desc = ", ".join(chunk_columns)
+            outputs.append((table_desc, table_summary, chunk_columns, i, access_control))
         
         return outputs
     
     def run(self, extract_output, use_cache=True):
-        table_desc, table_summary, column_names, start_index = extract_output 
+        table_desc, table_summary, column_names, start_index, access_control = extract_output 
 
         table_object = self.para.get("table_object")
         if table_object and hasattr(table_object, 'column_desc'):
@@ -22491,13 +17285,31 @@ class DescribeColumnsList(ListNode):
                         for old_col, new_col in zip(column_names, existing_columns[start_index:start_index+len(column_names)])}
                 return result
 
-        template = f"""You have the following table:
+        if access_control == 'Read Data Access':
+            template = f"""You have the following table:
 {table_desc}
 {table_summary}
 
 Tasks: 
-(1) Describe the columns in the table.
+(1) Describe the columns in the table based on the sample data provided.
 (2) If the original column name is not descriptive, provide a new name. Otherwise, keep the original name.
+Make sure there are no duplicated new column names
+
+Return in the following format:
+```json
+{{
+    "{column_names[0]}": ["Short description in < 10 words", "new_column_name"],
+    ...
+}}
+```"""
+        else:
+            template = f"""You have a table with the following columns:
+{table_desc}
+{table_summary}
+
+Tasks: 
+(1) Based on the column names, provide a brief description of what each column might represent.
+(2) If the original column name is not descriptive, suggest a new name. Otherwise, keep the original name.
 Make sure there are no duplicated new column names
 
 Return in the following format:
@@ -22685,6 +17497,11 @@ class DecideMissingList(ListNode):
         display(HTML(f"{running_spinner_html} Checking missing values for <i>{table_name}</i>..."))
         create_progress_bar_with_numbers(2, doc_steps)
         self.progress = show_progress(1)
+
+        explain_missing_values = self.para['cocoon_stage_options'].get('explain_missing_values', False)
+        
+        if not explain_missing_values:
+            return []
 
         schema = table_pipeline.get_schema(con)
         columns = []
@@ -27072,30 +21889,39 @@ class StageProgress(Node):
             table_name = self.para["table_name"]
             new_table_name = rename_for_stg(table_name)
             
-            file_names = [f"{new_table_name}.sql",  f"{new_table_name}.yml",]
+            stg_file_names = [f"{new_table_name}.sql", f"{new_table_name}.yml"]
+            original_file_names = [f"{table_name}.yml"]
             
             if "dbt_directory" in self.para:
-
-                file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
+                stg_file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in stg_file_names]
+                original_file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in original_file_names]
             
-            if all([file_exists(file_name) for file_name in file_names]):
-                sql_query = read_from(file_names[0])
+            stg_files_exist = all(file_exists(file_name) for file_name in stg_file_names)
+            original_yml_exists = file_exists(original_file_names[0])
+            
+            if stg_files_exist or original_yml_exists:
                 con = self.item["con"]
-                source_step = SQLStep(table_name=table_name, con=con)
                 database = self.para.get("database", None)
                 schema = self.para.get("schema", None)
-                sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
-                table_pipeline = TransformationSQLPipeline(steps = [source_step], edges=[])
-                table_pipeline.add_step_to_final(sql_step)
-                self.para["table_pipeline"] = table_pipeline
-                    
                 
-                yml_data = read_from(file_names[1])
+                source_step = SQLStep(table_name=table_name, con=con, database=database, schema=schema)
+                table_pipeline = TransformationSQLPipeline(steps=[source_step], edges=[])
+                
+                if stg_files_exist:
+                    sql_query = read_from(stg_file_names[0])
+                    sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
+                    table_pipeline.add_step_to_final(sql_step)
+                    
+                    yml_data = read_from(stg_file_names[1])
+                else:
+                    yml_data = read_from(original_file_names[0])
+                
+                self.para["table_pipeline"] = table_pipeline
+                
                 table_object = self.para["table_object"]
                 table_object.read_attributes_from_dbt_schema_yml(yml_data)
-                    
-                callback({"next_node": "COCOON_END_WORKFLOW"})
                 
+                callback({"next_node": "COCOON_END_WORKFLOW"})
             else:
                 callback({})
         
@@ -27344,6 +22170,9 @@ class StageForAll(MultipleNode):
                 for node_id, node in self.nodes.items():
                     try:
                         table_pipeline = node.para["table_pipeline"]
+                        if table_pipeline.is_materialized():
+                            continue
+
                         database = self.para.get("database", None)
                         schema = self.para.get("schema", None)
                         table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
@@ -27369,15 +22198,15 @@ class StageForAll(MultipleNode):
         
         def on_submit_button_click(b):
             with self.output_context():
+                schema_only = self.para.get("cocoon_catalog_options", {}).get("schema_only", False)
+                
                 display(HTML(f'{running_spinner_html} Verifying tables ...'))
                 
                 for node in self.nodes.values():
-                    
                     table_object = node.para["table_object"]
                     table_pipeline = node.para["table_pipeline"]
                     old_table_name = node.para["table_name"]
                     new_table_name = table_object.table_name
-                    
                     old_table_found = False
                     for partition_name, table_list in data_project.partition_mapping.items():
                         if old_table_name in table_list:
@@ -27385,37 +22214,38 @@ class StageForAll(MultipleNode):
                             table_list[table_list.index(old_table_name)] = new_table_name
                             
                             if partition_name not in data_project.tables or partition_name not in data_project.table_pipelines:
-                                try:
-                                    table_schema = table_pipeline.get_schema(con)
-                                    
-                                    if not table_schema:
-                                        print(f"⚠️ Can't read {partition_name}; Is it materialized?")
-                                        return
-                                    
-                                    data_project.add_table(partition_name, table_schema)
+                                if schema_only:
+                                    data_project.add_table(partition_name, table_object.columns)
                                     data_project.table_pipelines[partition_name] = table_pipeline
-                                    
-                                except Exception as e:
-                                    print(f"⚠️ Error reading {partition_name}; Is it materialized?\n {str(e)}")
-                                    return
-                            
+                                else:
+                                    try:
+                                        table_schema = table_pipeline.get_schema(con)
+                                        if not table_schema:
+                                            print(f"⚠️ Can't read {partition_name}; Is it materialized?")
+                                            return
+                                        data_project.add_table(partition_name, table_schema)
+                                        data_project.table_pipelines[partition_name] = table_pipeline
+                                    except Exception as e:
+                                        print(f"⚠️ Error reading {partition_name}; Is it materialized?\n {str(e)}")
+                                        return
                             break
                     
                     if not old_table_found:
-                        try:
-                            table_schema = table_pipeline.get_schema(con)
-                            
-                            if not table_schema:
-                                print(f"⚠️ Can't read {new_table_name}; Is it materialized?")
+                        if schema_only:
+                            data_project.add_table(new_table_name, table_object.columns)
+                        else:
+                            try:
+                                table_schema = table_pipeline.get_schema(con)
+                                if not table_schema:
+                                    print(f"⚠️ Can't read {new_table_name}; Is it materialized?")
+                                    return
+                                data_project.add_table(new_table_name, table_schema)
+                            except Exception as e:
+                                print(f"⚠️ Error reading {new_table_name}; Is it materialized?\n {str(e)}")
                                 return
-                            
-                            data_project.add_table(new_table_name, table_schema)
-                            
-                        except Exception as e:
-                            print(f"⚠️ Error reading {new_table_name}; Is it materialized?\n {str(e)}")
-                            return
                 
                 callback({})
+                return
                 
         
         submit_button.on_click(on_submit_button_click)
@@ -29086,19 +23916,23 @@ class DecideSCDTable(Node):
         table_object = data_project.table_object[table_name]
         table_desc = table_object.table_summary
         
-        sample_size = 5
-        sample_df = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT {sample_size}')
-        sample_df = sample_df.applymap(truncate_cell)
+        if self.para.get("cocoon_catalog_options", {}).get("schema_only", False):
+            table_info = table_object.print_column_desc()
+        else:
+            sample_size = 5
+            sample_df = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT {sample_size}')
+            sample_df = sample_df.applymap(truncate_cell)
+            table_info = sample_df.to_csv(index=False, quoting=1)
         
-        return table_name, table_desc, sample_df
-
+        return table_name, table_desc, table_info
+        
     def run(self, extract_output, use_cache=True):
-        table_name, table_desc, sample_df = extract_output
+        table_name, table_desc, table_info = extract_output
 
         template =  f"""You have table '{table_name}': {table_desc}
         
-Here are its sample rows:
-{sample_df.to_csv(index=False, quoting=1)}
+Here is the table information:
+{table_info}
 
 Is the table a slowly changing dimension?
 SCD have different versions of rows to track dimension element changes over time
@@ -29180,18 +24014,17 @@ class DecideSCDForAll(MultipleNode):
         return node
 
     def extract(self, item):
+        cocoon_catalog_options = self.para.get('cocoon_catalog_options', {})
+        
+        if cocoon_catalog_options.get("schema_only", False) or cocoon_catalog_options.get("scd", True) is False:
+            self.elements = []
+            self.nodes = {}
+            return
+
         data_project = self.para["data_project"]
         
         candidate_elements = set(data_project.tables.keys())
         candidate_elements -= set(data_project.partition_mapping.keys())
-        
-        if (hasattr(self, 'para') and 
-            isinstance(self.para, dict) and 
-            isinstance(self.para.get('cocoon_catalog_options'), dict) and 
-            self.para['cocoon_catalog_options'].get('scd') is False):
-            self.elements = []
-            self.nodes = {}
-            return
         
         self.elements = list(candidate_elements)
         
@@ -29364,25 +24197,25 @@ class DecideKeysTable(Node):
         
         data_project = self.para["data_project"]
         table_pipeline = data_project.table_pipelines[table_name]
-        
-        sample_size = 5
-        sample_df = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT {sample_size}')
-        sample_df = sample_df.applymap(truncate_cell)
-        
         table_object = data_project.table_object[table_name]
         table_summary = table_object.table_summary
         column_desc = table_object.print_column_desc(show_category=True, show_unique=True, show_pattern=True)
 
+        if self.para.get("cocoon_catalog_options", {}).get("schema_only", False):
+            sample_df = ""
+        else:
+            sample_size = 5
+            sample_df = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT {sample_size}')
+            sample_df = sample_df.applymap(truncate_cell)
+            sample_df = sample_df.to_csv(index=False, quoting=1)
+        
         return table_name, sample_df, table_summary, column_desc
-    
+
     def run(self, extract_output, use_cache=True):
         table_name, sample_df, table_summary, column_desc = extract_output
         
         template =  f"""You have table '{table_name}': {table_summary}
-        
-It has the following sample rows:
-{sample_df.to_csv(index=False, quoting=1)}
-
+{"It has the following sample rows:" + sample_df  if sample_df else ""}
 Below are the summary of the columns:
 {column_desc}
 
@@ -29409,7 +24242,6 @@ pk: col1 # Leave empty if no single-column primary key
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
         
-    
         if not isinstance(summary, dict):
             raise TypeError("summary must be a dictionary")
         
@@ -29430,12 +24262,15 @@ pk: col1 # Leave empty if no single-column primary key
             raise TypeError("summary['pk'] must be a string or None")
 
         summary["keys"] = [key for key in summary["keys"] if key]
-        for key in summary['keys']:
-            if key not in sample_df.columns:
-                raise ValueError(f"Key '{key}' is not a column in the provided DataFrame")
 
-        if 'pk' in summary and summary['pk'] and summary['pk'] not in sample_df.columns:
-            raise ValueError(f"Primary key '{summary['pk']}' is not a column in the provided DataFrame")
+        table_columns = list(self.para["data_project"].table_object[table_name].column_desc.keys())
+
+        for key in summary['keys']:
+            if key not in table_columns:
+                raise ValueError(f"Key '{key}' is not a column in the table")
+
+        if 'pk' in summary and summary['pk'] and summary['pk'] not in table_columns:
+            raise ValueError(f"Primary key '{summary['pk']}' is not a column in the table")
         
         if 'pk' in summary and summary['pk'] and summary['pk'] not in summary['keys']:
             summary['keys'].append(summary['pk'])
@@ -29727,35 +24562,57 @@ class RelationUnderstanding(Node):
         table_summary = table_object.table_summary
         table_pipeline = data_project.table_pipelines[table_name]
         
-        sample_size = 5
-        sample_df = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT {sample_size}')
-        sample_df = sample_df.applymap(truncate_cell)
+        schema_only = self.para.get("cocoon_catalog_options", {}).get("schema_only", False)
         
-        return table_name, entities, sample_df, table_summary
+        if schema_only:
+            column_desc = table_object.print_column_desc(show_category=True, show_unique=True, show_pattern=True)
+            return table_name, entities, column_desc, table_summary, schema_only
+        else:
+            sample_size = 5
+            sample_df = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT {sample_size}')
+            sample_df = sample_df.applymap(truncate_cell)
+            return table_name, entities, sample_df, table_summary, schema_only
     
     def run(self, extract_output, use_cache=True):
-        table_name, entities, sample_df, table_summary = extract_output
+        table_name, entities, data, table_summary, schema_only = extract_output
         
         more_than_one_entity = len(entities) > 1
 
-        template = f"""You have a table '{table_name}': {table_summary}
-It has the following sample rows:
-{sample_df.to_csv(index=False, quoting=1)}
+        if schema_only:
+            template = f"""You have a table '{table_name}': {table_summary}
+It has the following column descriptions:
+{data}
 
 It is about {len(entities)} entities: '{', '.join(entities)}'
+"""
+        else:
+            template = f"""You have a table '{table_name}': {table_summary}
+It has the following sample rows:
+{data.to_csv(index=False, quoting=1)}
 
+It is about {len(entities)} entities: '{', '.join(entities)}'
+"""
+
+        template += """
 First, describe the relation between the entities:
 (1). Include all entities
 (2). Simple sentence about how they are related (<20 words)
 (3). Be descriptive and specific (not just 'relates', 'has', ...)
-{'Then, pick a name for the relation.' if more_than_one_entity else ''}
+"""
+        if more_than_one_entity:
+            template += "Then, pick a name for the relation."
+
+        template += """
 
 Return in the following format:
 ```yml
 relation_desc: >-
     This stores the Items that are ordered by Customers
-{'relation_name: CustomerOrderItems' if more_than_one_entity else ''}
-```"""
+"""
+        if more_than_one_entity:
+            template += "relation_name: CustomerOrderItems"
+        template += "```"
+
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
@@ -29891,7 +24748,8 @@ def read_source_file(sources_file_path):
         return None, None, None
 
 def read_data_project_from_dir(directory, con=None, database=None, schema=None, source_only=False, create=True):
-    data_project = DataProject()
+
+    data_project = DataProject(directory)
     dbt_directory = os.path.join(directory, "models")
 
     data_project.name = os.path.basename(os.path.normpath(directory))
@@ -29945,20 +24803,25 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
     stage_tables = []
     if file_exists(os.path.join(dbt_directory, "stage")):
         for file_name in list_files_in(os.path.join(dbt_directory, "stage")):
-            if file_name.endswith(".sql"):
+            if file_name.endswith(".yml"):
                 stage_tables.append(file_name[:-4])
                 
     for stage_table in stage_tables:
         new_table_name = stage_table
-        file_path = os.path.join(dbt_directory, "stage", f"{stage_table}.sql")
-        sql_query = read_from(file_path)
-        sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
-        table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
         
-        if create and con:
-            table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
+        table_pipeline = TransformationSQLPipeline(steps=[], edges=[])
+        
+        sql_file_path = os.path.join(dbt_directory, "stage", f"{stage_table}.sql")
+        if file_exists(sql_file_path):
+            sql_query = read_from(sql_file_path)
+            sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
+            table_pipeline.steps.append(sql_step)
+            
+            if create and con:
+                table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
+        
         data_project.table_pipelines[new_table_name] = table_pipeline
-                    
+        
         file_path = os.path.join(dbt_directory, "stage", f"{stage_table}.yml")
         yml_data = yaml.safe_load(read_from(file_path))
         table_object = Table()
@@ -30045,7 +24908,9 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
             
     if er_yml_content:
         data_project.build_er_story_from_yml(er_yml_content)
-    
+
+    data_project.generate_text_join()
+
     return data_project
 
 
@@ -30270,7 +25135,7 @@ clusters:
             callback(original_df.to_json(orient="split"))
             return
         
-        editable_columns = [True, False, True, True]
+        editable_columns = [True, True, True, True]
         reset = True
         editable_list = {
             'Tables': {}
@@ -31954,6 +26819,11 @@ class DetectReferentialIntegrity(Node):
         data_project = self.para["data_project"]
         con = self.item["con"]
         query_widget = self.item["query_widget"]
+
+        if self.para.get("cocoon_catalog_options", {}).get("schema_only", False):
+            empty_df = pd.DataFrame(columns=['PK', 'FK', 'Orphan', 'Explanation'])
+            callback(empty_df.to_json(orient="split"))
+            return
 
         pk_fk_document = self.get_sibling_document('Connect PK FK Table')
         pk_fk_df = pd.read_json(pk_fk_document, orient="split")
@@ -34443,83 +29313,85 @@ class DbtLineage:
         return self.name
     
     def _create_tables(self):
-        self.conn.execute("""
-            CREATE TABLE model (
-                model_name VARCHAR PRIMARY KEY,
-                database VARCHAR,
-                schema VARCHAR,
-                table_name VARCHAR,
-                original_file_path VARCHAR,
-                raw_code TEXT,
-                compiled_path VARCHAR,
-                compiled_code TEXT,
-                yml_path VARCHAR,
-                materialized VARCHAR,
-                description TEXT,
-                cocoon_description TEXT
-            )
-        """)
+        self.conn.execute("""CREATE TABLE model (
+    model_name VARCHAR PRIMARY KEY,
+    database VARCHAR,
+    schema VARCHAR,
+    table_name VARCHAR,
+    original_file_path VARCHAR,
+    raw_code TEXT,
+    compiled_path VARCHAR,
+    compiled_code TEXT,
+    yml_path VARCHAR,
+    materialized VARCHAR,
+    description TEXT,
+    cocoon_description TEXT
+)""")
+        
+        self.conn.execute("""CREATE TABLE model_cocoon_tag (
+    model_name VARCHAR,
+    cocoon_tag VARCHAR,
+    cocoon_description TEXT,
+    UNIQUE(model_name, cocoon_tag)
+)""")
         
         self.conn.execute("""
-            CREATE TABLE model_cocoon_tag (
-                model_name VARCHAR,
-                cocoon_tag VARCHAR,
-                cocoon_description TEXT,
-                UNIQUE(model_name, cocoon_tag)
-            )
-        """)
-        
-        self.conn.execute("""
-        CREATE TABLE model_column_cocoon_tag (
-            source_model_name VARCHAR,
-            source_column_name VARCHAR,
-            target_model_name VARCHAR,
-            cocoon_tag VARCHAR,
-            cocoon_description TEXT,
-            UNIQUE(source_model_name, source_column_name, target_model_name, cocoon_tag)
-        )
-        """)
+CREATE TABLE model_column_cocoon_tag (
+    source_model_name VARCHAR,
+    source_column_name VARCHAR,
+    target_model_name VARCHAR,
+    cocoon_tag VARCHAR,
+    cocoon_description TEXT,
+    UNIQUE(source_model_name, source_column_name, target_model_name, cocoon_tag)
+)""")
                 
         self.conn.execute("""
-            CREATE TABLE model_lineage (
-                source_model_name VARCHAR,
-                target_model_name VARCHAR,
-                UNIQUE(source_model_name, target_model_name)
-            )
-        """)
+CREATE TABLE model_lineage (
+    source_model_name VARCHAR,
+    target_model_name VARCHAR,
+    UNIQUE(source_model_name, target_model_name)
+)""")
         
         self.conn.execute("""
-            CREATE TABLE column_lineage (
-                source_model_name VARCHAR,
-                source_column_name VARCHAR,
-                target_model_name VARCHAR,
-                target_column_name VARCHAR,
-                cocoon_description TEXT,
-                UNIQUE(source_model_name, source_column_name, target_model_name, target_column_name)
-            )
-        """)
+CREATE TABLE column_lineage (
+    source_model_name VARCHAR,
+    source_column_name VARCHAR,
+    target_model_name VARCHAR,
+    target_column_name VARCHAR,
+    cocoon_description TEXT,
+    UNIQUE(source_model_name, source_column_name, target_model_name, target_column_name)
+)""")
         
         self.conn.execute("""
-            CREATE TABLE model_column (
-                model_name VARCHAR,
-                column_name VARCHAR,
-                description TEXT,
-                cocoon_description TEXT,
-                UNIQUE(model_name, column_name)
-            )
-        """)
+CREATE TABLE model_column (
+    model_name VARCHAR,
+    column_name VARCHAR,
+    description TEXT,
+    cocoon_description TEXT,
+    UNIQUE(model_name, column_name)
+)""")
 
     def add_or_update_model(self, model_data):
         columns = ', '.join(model_data.keys())
         placeholders = ', '.join(['?' for _ in model_data])
         values = tuple(model_data.values())
         
-        self.conn.execute(f"""
+        update_columns = [k for k in model_data.keys() if k != 'model_name']
+        if update_columns:
+            update_clause = ', '.join([f"{k} = excluded.{k}" for k in update_columns])
+            query = f"""
             INSERT INTO model ({columns})
             VALUES ({placeholders})
             ON CONFLICT(model_name) DO UPDATE SET
-            {', '.join([f"{k} = EXCLUDED.{k}" for k in model_data.keys() if k != 'model_name'])}
-        """, values)
+            {update_clause}
+            """
+        else:
+            query = f"""
+            INSERT INTO model ({columns})
+            VALUES ({placeholders})
+            ON CONFLICT(model_name) DO NOTHING
+            """
+        self.conn.execute(query, values)
             
     def add_model_cocoon_tag(self, model_name, cocoon_tag):
         existing = self.conn.execute("""
@@ -34546,6 +29418,7 @@ class DbtLineage:
             """, (source_model_name, target_model_name))
             
             self.invalidate_lineage_cache()
+            self.get_ordered_models()
 
     def add_or_update_column_lineage(self, column_lineage_data):
         columns = ', '.join(column_lineage_data.keys())
@@ -34619,41 +29492,81 @@ class DbtLineage:
         if table_exists:
             return
 
-        self.conn.execute("""
-            CREATE OR REPLACE TABLE ordered_models AS
-            WITH RECURSIVE ancestor_count AS (
-                -- Base case: models with no parents
-                SELECT 
-                    m.model_name,
-                    0 AS num_ancestors
-                FROM 
-                    model m
-                WHERE 
-                    m.model_name NOT IN (SELECT DISTINCT target_model_name FROM model_lineage)
-                
-                UNION ALL
-                
-                -- Recursive case: count ancestors for models with parents
-                SELECT 
-                    ml.target_model_name AS model_name,
-                    ac.num_ancestors + 1 AS num_ancestors
-                FROM 
-                    model_lineage ml
-                JOIN 
-                    ancestor_count ac ON ml.source_model_name = ac.model_name
-            )
-            SELECT 
-                model_name, 
-                SUM(num_ancestors) AS total_ancestors,
-                ROW_NUMBER() OVER (ORDER BY SUM(num_ancestors), model_name) AS new_rowid
-            FROM 
-                ancestor_count
-            GROUP BY 
-                model_name
-            ORDER BY 
-                total_ancestors, model_name
-        """)
+        model_lineage = self.conn.execute("SELECT source_model_name, target_model_name FROM model_lineage").fetchall()
+        
+        graph = {}
+        for source, target in model_lineage:
+            graph.setdefault(source, set()).add(target)
+        
+        visited = set()
+        temp_mark = set()
+        ordered_models = []
+        
+        def visit(node):
+            if node in temp_mark:
+                raise Exception(f"Cycle detected in the model lineage involving '{node}'")
+            if node not in visited:
+                temp_mark.add(node)
+                for neighbor in graph.get(node, []):
+                    visit(neighbor)
+                temp_mark.remove(node)
+                visited.add(node)
+                ordered_models.append(node)
+        
+        all_models = [row[0] for row in self.conn.execute("SELECT model_name FROM model").fetchall()]
+        for model_name in all_models:
+            if model_name not in visited:
+                visit(model_name)
+        
+        self.conn.execute("CREATE OR REPLACE TABLE ordered_models (model_name VARCHAR, new_rowid INTEGER)")
+        for idx, model_name in enumerate(reversed(ordered_models), 1):
+            self.conn.execute("INSERT INTO ordered_models (model_name, new_rowid) VALUES (?, ?)", (model_name, idx))
 
+    def populate_from_directory(self, directory=None, file_types=None, forced_refresh=False):
+        if directory is None:
+            directory = self.dbt_directory
+        
+        if not directory:
+            raise ValueError("No directory specified. Please provide a directory or set dbt_directory when initializing DbtLineage.")
+
+        if file_types is None:
+            file_types = [".sql"]
+
+        for root, dirs, files in os.walk(directory):
+            for file in files:
+                if any(file.endswith(ext) for ext in file_types):
+                    file_path = os.path.join(root, file)
+                    model_name = os.path.splitext(file)[0]
+                    
+                    with open(file_path, 'r') as sql_file:
+                        sql_content = sql_file.read()
+                    
+                    if forced_refresh:
+                        self.conn.execute("""
+                            DELETE FROM model_lineage 
+                            WHERE target_model_name = ?
+                        """, (model_name,))
+                        
+                        self.conn.execute("""
+                            DROP TABLE IF EXISTS ordered_models
+                        """)
+                    
+                    model_data = {
+                        'model_name': model_name,
+                        'original_file_path': file_path,
+                        'raw_code': sql_content,
+                        'database': '',
+                        'schema': '',
+                        'table_name': model_name,
+                        'compiled_path': '',
+                        'compiled_code': '',
+                        'yml_path': '',
+                        'materialized': '',
+                        'description': '',
+                        'cocoon_description': ''
+                    }
+                    
+                    self.add_or_update_model(model_data)
         
     def get_ordered_models(self):
         self.compute_lineage_info()
@@ -34940,7 +29853,7 @@ class DbtLineage:
 
         return properties
     
-    def create_dbt_lineage_selectbox(self, model_ids=None):
+    def create_data_selectbox(self, model_ids=None):
         all_models = self.get_ordered_models()
         
         if model_ids is not None:
@@ -34948,13 +29861,16 @@ class DbtLineage:
         else:
             filtered_models = all_models
         
-        options = ["Select an option", "Model Lineage"] + [f"{model_id}. {model_name}" for model_name, model_id in filtered_models]
+        options = ["Model Lineage"] + [f"{model_id}. {model_name}" for model_name, model_id in filtered_models]
         
-        selected_option = st.selectbox("Select a model or view lineage", options=options)
+        if model_ids:
+            selectbox_key = f"model_select_{'_'.join(map(str, sorted(model_ids)))}"
+        else:
+            selectbox_key = "model_select_all"
         
-        if selected_option == "Select an option":
-            pass
-        elif selected_option == "Model Lineage":
+        selected_option = st.selectbox("Select a model or view lineage", options=options, key=selectbox_key)
+        
+        if selected_option == "Model Lineage":
             if model_ids is not None:
                 lineage_html = self.get_model_lineage_html_by_indices(model_indices=model_ids)
                 st.components.v1.html(lineage_html, height=300, scrolling=True)
@@ -34992,11 +29908,11 @@ class DbtLineage:
         
         full_description = ((description or '') + ' ' + (cocoon_description or '')).strip()
         if full_description:
-            st.markdown("**Model Description**")
+            st.markdown("*Pipline model description*")
             st.write(full_description)
             
-        st.markdown("**SQL**")
-        st.code(raw_sql, language='sql')
+        st.markdown("*SQL codes for the pipeline model*")
+        st.code(raw_sql, language="sql")
         
         columns_df = pd.read_sql("""
             SELECT column_name, description, cocoon_description
@@ -35006,7 +29922,7 @@ class DbtLineage:
         """, self.conn, params=(model_name,))
         
         if not columns_df.empty:
-            st.markdown("**Column Descriptions**")
+            st.markdown("*Column description for the pipeline model*")
 
             columns_df['full_description'] = columns_df['description'].fillna('') + ' ' + columns_df['cocoon_description'].fillna('')
             columns_df['full_description'] = columns_df['full_description'].apply(lambda x: x.strip() if x.strip() else "No description available.")
@@ -35016,7 +29932,7 @@ class DbtLineage:
                 'full_description': 'Description'
             })
             
-            st.dataframe(display_df, use_container_width=True)
+            st.dataframe(display_df, use_container_width=True, hide_index=True)
 
     def generate_item_text_summary(self, item_id):
         model_summary_dict = self.generate_model_summary_text_dict(model_id=item_id)
@@ -35271,7 +30187,7 @@ class DbtLineage:
         
     def generate_text_summary(self, idx=None):
         name = self.get_name()
-        intro = f"# This is a data pipeline\n"
+        intro = f"# This is a data pipeline and how one model references another\n"
         intro += "# Below are models (higher index are downstream):\n"
         return intro + self.generate_text_lineage()
 
@@ -35754,9 +30670,21 @@ class SelectStageOptions(Node):
             checkboxes_widget = widgets.VBox([widgets.HBox([cb, label], layout=widgets.Layout(align_items='center', margin='0')) for cb, label in zip(checkboxes, labels_html)])
             return checkboxes_widget, checkboxes
 
-        options = [
-            ['<span class="option-label"><div><strong>Table Description</strong></div><div><em><b>🔬 (Schema-Only) Read Access:</b> Cocoon describes the table</em></div></span>', 'table_desc', True, False],
-            ['<span class="option-label"><div><strong>Column Description</strong></div><div><em><b>🔬 (Schema-Only) Read Access:</b> Cocoon describes each column</em></div></span>', 'col_desc', True, False],
+        mandatory_options = [
+            ['<span class="option-label"><div><strong>Table + Column Description</strong></div><div><em>Cocoon describes the table and each column</em></div></span>', 'table_desc', True, False],
+        ]
+
+        mandatory_checkboxes_widget, mandatory_checkboxes = create_html_checkboxes(mandatory_options)
+
+        access_control = widgets.RadioButtons(
+            options=['Read Data Access', 'Schema Only Access'],
+            description='',
+            disabled=False,
+            layout=widgets.Layout(margin='0 0 0 35px')
+        )
+
+        other_options = [
+            ['<span class="option-label"><div><strong>Explain Missing Values</strong></div><div><em><b>📖 Read Access:</b> Cocoon explains the percentage and potential reasons for missing values</em></div></span>', 'explain_missing_values', True, True],
             ['<span class="option-label"><div><strong>Detect Regex Patterns</strong></div><div><em><b>📖 Read Access:</b> Cocoon detects regular patterns for string</em></div></span>', 'detect_regex_patterns', True, True],
             ['<span class="option-label"><div><strong>Parse Variant Types (Snowflake-only)</strong></div><div><em><b>📖 Read Access:</b> Cocoon identifies the data type for Variant type</em></div></span>', 'parse_variant_types', True, True],
             ['<span class="option-label"><div><strong>Unique test</strong></div><div><em><b>📖 Read Access:</b> Cocoon writes tests for columns shall be unique</em></div></span>', 'unique_test', True, True],
@@ -35772,7 +30700,7 @@ class SelectStageOptions(Node):
             ['<span class="option-label"><div><strong>Generate HTML report</strong></div><div><em>Cocoon generates HTML report to summarize the results</em></div></span>', 'generate_html_report', False, True]
         ]
 
-        checkboxes_widget, checkboxes = create_html_checkboxes(options)
+        other_checkboxes_widget, other_checkboxes = create_html_checkboxes(other_options)
 
         cardinality_threshold = widgets.IntText(
             value=300,
@@ -35895,7 +30823,12 @@ create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
                 display(HTML(f'To reuse the options in the future run:<pre class="command-line"><code>{code_snippet}</code></pre>'))
                 
         def get_selected_options():
-            selected_options = {option[1]: checkbox.value for option, checkbox in zip(options, checkboxes)}
+            selected_options = {
+                option[1]: checkbox.value 
+                for options, checkboxes in [(mandatory_options, mandatory_checkboxes), (other_options, other_checkboxes)]
+                for option, checkbox in zip(options, checkboxes)
+            }
+            selected_options['description_access_control'] = access_control.value
             
             if selected_options['standardize_values']:
                 selected_options['cardinality_threshold'] = cardinality_threshold.value
@@ -35913,7 +30846,13 @@ create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
 
         widget = widgets.VBox([
             widgets.HTML(value="<div style='line-height: 1.2;'><h2>⚙️ Data Workflow Options</h2><em>Customizing the workflow for all tables in Express Mode. If unsure, leave it as default.</em></div>"),
-            widgets.VBox([checkboxes_widget, cardinality_widget, pii_container], layout=widgets.Layout(border='1px solid #ddd', padding='10px')),
+            widgets.VBox([
+                mandatory_checkboxes_widget,
+                access_control,
+                other_checkboxes_widget, 
+                cardinality_widget, 
+                pii_container
+            ], layout=widgets.Layout(border='1px solid #ddd', padding='10px')),
             widgets.HBox([export_button, submit_button]),
             output
         ])
@@ -40800,8 +35739,17 @@ class MultipleCatalogConfig(Node):
         self.html_widget.value = obj.generate_html_summary()
 
 def validate_catalog_and_generate_object(catalog):
+    db_path = os.path.join(catalog, 'cocoon_lineage.db')
+    if os.path.exists(db_path):
+        try:
+            dbt_lineage = DbtLineage(dbt_directory=catalog)
+            dbt_lineage.load_from_disk(db_path)
+            return dbt_lineage
+        except Exception as e:
+            print(f"Error loading DbtLineage from {db_path}: {str(e)}")
+            return None
+
     manifest_path = os.path.join(catalog, 'target', 'manifest.json')
-    
     if os.path.exists(manifest_path):
         try:
             dbt_lineage = DbtLineage(dbt_directory=catalog)
@@ -40812,14 +35760,14 @@ def validate_catalog_and_generate_object(catalog):
         except Exception as e:
             print(f"Error processing DBT manifest for {catalog}: {str(e)}")
             return None
-    else:
-        try:
-            data_project = read_data_project_from_dir(catalog)
-            return data_project
-        except Exception as e:
-            print(f"Error processing Data Project for {catalog}: {str(e)}")
-            return None
-
+    
+    try:
+        data_project = read_data_project_from_dir(catalog)
+        return data_project
+    except Exception as e:
+        print(f"Error processing Data Project for {catalog}: {str(e)}")
+        return None
+    
 class MultipleCatalogBuilder(Node):
     default_name = 'Multiple Catalog Builder'
     default_description = 'This step reads the DBT catalog and builds the data project.'
@@ -41150,9 +36098,16 @@ Your next action (Explore or Conclude):"""
                     elif content_type == 'html':
                         st.components.v1.html(content, height=300, scrolling=True)
                     elif content_type == 'sql':
-                        st.code(content, language='sql')
+                        st.code(content, language="sql")
                     elif content_type == 'yml':
-                        st.code(content, language='yaml')
+                        st.markdown(
+                            f"""
+                            <div style="max-height: 500px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;">
+                            <pre><code class="language-yaml">{content}</code></pre>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
                     elif content_type == 'cocoon':
                         self.dbt_lineage.create_dbt_lineage_selectbox(model_ids=content)
                     else:
@@ -41160,3 +36115,1136 @@ Your next action (Explore or Conclude):"""
         
         if self.track_cost:
             st.markdown(f"<small>Cost estimation (based on Claude 3.5 Sonnet): {self.get_session_cost()}</small>", unsafe_allow_html=True)
+
+class ColumnMapperNode(Node):
+    default_name = 'Column Mapper'
+    default_description = 'This node maps input columns to target table columns.'
+
+    def extract(self, item):
+        con = self.para['con']
+        target_tables = self.para['target_tables']
+
+        target_descriptions = {}
+        for table, df in target_tables.items():
+            columns = []
+            for idx, row in df.iterrows():
+                col_info = f"{idx + 1}. \"{row['name']}\" ({row['type']})"
+                if row['description']:
+                    col_info += f": \"{row['description']}\""
+                columns.append(col_info)
+            target_descriptions[f"{table}"] = "\n".join(columns)
+
+        sample_query = "SELECT * FROM input_table LIMIT 5"
+        sample_df = con.execute(sample_query).df()
+        sample_df = sample_df.applymap(truncate_cell)
+
+        return {
+            'target_descriptions': target_descriptions,
+            'sample_df': sample_df
+        }
+
+    def run(self, extract_output, use_cache=True):
+        target_descriptions = extract_output['target_descriptions']
+        sample_df = extract_output['sample_df']
+
+        template = f"""You are an expert in data mapping. Given the following information:
+
+## Target tables and their columns:
+{yaml.dump(target_descriptions, default_flow_style=False)}
+
+## Sample of the input table:
+{sample_df.to_csv(index=False, quoting=2)}
+
+Please map each column from the input table to the most appropriate target table and column(s). 
+One input column can be mapped to multiple output columns across different tables.
+If an input column doesn't match any existing target columns but its meaning is clear and relates to a specific table, 
+suggest a new column name for the best matching target table.
+
+Respond in YAML format as follows:
+
+```yaml
+mapping:
+  - input_col: [input column name]
+    description: |
+        [brief description of the input column]
+    outputs:
+      - output_table: [target table name]
+        output_col: [target column name or suggested new column name]
+      - output_table: [another target table name]
+        output_col: [another target column name]
+```
+
+Ensure all input columns are mapped, and provide clear, concise descriptions."""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yaml_code(response['choices'][0]['message']["content"])
+        mapping = yaml.safe_load(yml_code)
+
+        if not isinstance(mapping, dict) or 'mapping' not in mapping:
+            raise ValueError("Invalid mapping format")
+        
+        validated_mapping = []
+        mapped_input_cols = set()
+        input_columns = sample_df.columns.tolist()
+
+        for item in mapping['mapping']:
+            if item['input_col'] in input_columns:
+                mapped_input_cols.add(item['input_col'])
+                
+                validated_outputs = []
+                for output in item.get('outputs', []):
+                    if output['output_table'] in target_descriptions:
+                        if output['output_col']:
+                            output['output_col'] = clean_column_name(output['output_col'])
+                        else:
+                            output['output_col'] = clean_column_name(item['input_col'])
+                        
+                        validated_outputs.append(output)
+                
+                item['description'] = item['description'].strip()
+                
+                item['outputs'] = validated_outputs
+                
+                validated_mapping.append(item)
+
+        for col in input_columns:
+            if col not in mapped_input_cols:
+                validated_mapping.append({
+                    'input_col': col,
+                    'description': 'Unmapped column',
+                    'outputs': []
+                })
+
+        return validated_mapping
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {
+            'mapping': []
+        }
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        return callback(run_output)
+
+
+def create_mapping_df(mapping):
+    rows = []
+    for item in mapping:
+        input_col = item.get('input_col', '')
+        description = item.get('description', '').strip()
+        outputs = item.get('outputs', [])
+        
+        if outputs:
+            for output in outputs:
+                if output.get('output_table') and output.get('output_col'):
+                    rows.append({
+                        'Input Column': input_col,
+                        'Description': description,
+                        'Output Table': output.get('output_table', ''),
+                        'Output Column': output.get('output_col', '')
+                    })
+    
+    df = pd.DataFrame(rows, columns=['Input Column', 'Description', 'Output Table', 'Output Column'])
+    return df
+
+class ColumnTransformerNode(Node):
+    default_name = 'Column Transformer'
+    default_description = 'This node suggests SQL transformations for mapped columns.'
+
+    def extract(self, item):
+        con = self.para['con']
+        mapping = self.get_sibling_document('Column Mapper')
+        target_tables = self.para['target_tables']
+        
+        mapping_df = create_mapping_df(mapping)
+
+        sample_query = "SELECT * FROM input_table LIMIT 100"
+        sample_df = con.execute(sample_query).df()
+        sample_df = sample_df.applymap(truncate_cell)
+
+        grouped_transformations = []
+        for (output_table, output_col), group in mapping_df.groupby(['Output Table', 'Output Column']):
+            if output_table and output_col:
+                transformation = OrderedDict([
+                    ('output_table', output_table),
+                    ('output_col', output_col),
+                    ('input_cols', group['Input Column'].tolist()),
+                    ('description', group['Description'].iloc[0])
+                ])
+                
+                if output_table in target_tables and output_col in target_tables[output_table]['name'].values:
+                    col_info = target_tables[output_table].loc[target_tables[output_table]['name'] == output_col].iloc[0]
+                    transformation['type'] = col_info['type']
+                    if col_info.get('description'):
+                        transformation['description'] = col_info['description']
+                
+                grouped_transformations.append(transformation)
+
+        return {
+            'grouped_transformations': grouped_transformations,
+            'sample_df': sample_df
+        }
+
+    def run(self, extract_output, use_cache=True):
+        grouped_transformations = extract_output['grouped_transformations']
+        sample_df = extract_output['sample_df']
+
+        if not grouped_transformations:
+            return self.run_but_fail(extract_output, use_cache)
+
+        template = f"""You are an expert in SQL and data transformation. Given the following information:
+
+## Input table sample (QUOTE_NONNUMERIC):
+{sample_df.to_csv(index=False, quoting=2)}
+
+## Column mappings and descriptions:
+{yaml.dump(grouped_transformations, default_flow_style=False)}
+
+For each output column, suggest an appropriate SQL transformation clause using DuckDB syntax if needed.
+Most columns do not need transformation, use an empty string "" if that's the case.
+
+Example transformations:
+{duckdb_cocoon_hint}
+
+Respond in YAML format as follows:
+
+```yaml
+transformations:
+  - output_table: target table name
+    output_col: target column name
+    sql_transform: |
+      [SQL transformation clause or ""]
+```
+
+Ensure all mapped columns are included in the response."""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yaml_code(response['choices'][0]['message']["content"])
+        transformations = yaml.safe_load(yml_code)
+
+        if not isinstance(transformations, dict) or 'transformations' not in transformations:
+            raise ValueError("Invalid transformations format")
+
+        validated_transformations = []
+        for transform in transformations['transformations']:
+            matching_group = next((g for g in grouped_transformations 
+                                   if g['output_table'] == transform['output_table'] 
+                                   and g['output_col'] == transform['output_col']), None)
+            
+            if matching_group:
+                transform['sql_transform'] = transform['sql_transform'].strip()
+
+                if transform['sql_transform'] == '""':
+                    transform['sql_transform'] = ''
+
+                if transform['sql_transform'].strip():    
+                    sql_query = f"SELECT {transform['sql_transform']} AS \"{transform['output_col']}\" FROM input_table LIMIT 1"
+                    try:
+                        self.para['con'].execute(sql_query)
+                    except Exception as e:
+                        print(f"SQL error for {transform['output_table']}.{transform['output_col']}. SQL is: {sql_query}. Error Message: {str(e)}")
+                        transform['sql_transform'] = ""
+                
+                transform['input_cols'] = matching_group['input_cols']
+                validated_transformations.append(transform)
+
+        for group in grouped_transformations:
+            if not any(t['output_table'] == group['output_table'] and t['output_col'] == group['output_col'] 
+                       for t in validated_transformations):
+                validated_transformations.append({
+                    'output_table': group['output_table'],
+                    'output_col': group['output_col'],
+                    'input_cols': group['input_cols'],
+                    'sql_transform': ""
+                })
+
+        return validated_transformations
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        return []
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        return callback(run_output)
+
+class ParseDFNode(Node):
+    default_name = 'Parse DataFrame'
+    default_description = 'This node parses and cleans input DataFrames using LLM-generated code.'
+
+    def extract(self, item):
+        df = self.para['df']
+        self.para['df'] = df
+        sample_df = df.head(10).iloc[:, :10]
+        sample_df = sample_df.applymap(lambda x: truncate_cell(x, max_length=1000))
+        return {'sample_df': sample_df}
+
+    def run(self, extract_output, use_cache=True):
+        sample_df = extract_output['sample_df']
+
+        template = f"""Task: Analyze if the df has parsing issues to address. For example:
+
+1. Incorrect headers
+(e.g., if the headers are actually in row)
+"","Unnamed__0","Unnamed__1","Unnamed__2"
+"0","","",""
+"1","","",""
+"2","","First Name","Last Name"
+"3","1.0","John","Doe"
+
+```
+def clean_df(df):
+    # Replace column names with the third row of data (index 2)
+    df.columns = df.iloc[2]
+    
+    # Drop all rows up to and including the header row
+    df = df.drop(df.index[:3]).reset_index(drop=True)
+    
+    return df_clean
+```
+
+2. Missing headers 
+(e.g., if the header is not column names but values)
+"","John Doe","28"
+"0","Jane Smith","34"
+"1","Alice Johnson","45"
+
+```
+def clean_df(df):
+    df.loc[-1] = df.columns  # Add the headers as a new row
+    df.index = df.index + 1  # Shift index to accommodate the new row
+    df = df.sort_index()     # Sort by index to ensure the new row is at the top
+
+    # Assign new column names based on your understanding of the data
+    df.columns = ["name", "age"]
+    return df
+```
+
+3. Separated values in cells. 
+(E.g., there is only one column 'name|age', but the values are separated by '|'.)
+"","name|age"
+"0","John Doe|28"
+"1","Jane Smith|34"
+"2","Alice Johnson|45"
+
+```
+def clean_df(df):
+    # Split the 'name|age' column into separate 'name' and 'age' columns
+    df_clean[['name', 'age']] = df_clean['name|age'].str.split('|', expand=True)
+    
+    # Drop the original combined column
+    df_clean = df_clean.drop(columns=['name|age'])
+    
+    return df_clean
+```
+
+* 4. DON'T REMOVE ANY COLUMN
+Do nothing! This is not a parsing issue. We will handle it later.
+"","Name","","Age"
+"0","Alice","4","25"
+"1","Bob","5","30"
+"2","Charlie","6","35"
+
+```
+explanation: >-
+    The second column has empty header, but I will not remove it according to the instruction.
+need_to_clean: false
+```
+
+### NOW THE RESULT OF df.to_csv(index=True, quoting=1), where first line (not indexed) is the header###
+{sample_df.to_csv(index=True, quoting=1)}
+### END OF THE RESULT ###
+
+First reason about if there is any parsing issue.
+If there is an issue, fill in the python function below, with detailed comments. 
+
+DONT: change the data type. 
+DONT: change the function name, and the return clause.
+DONT: remove the columns.
+
+```yaml
+explanation: >-
+    The header contains... The rows are about ...
+    It (has/doesn't have) any parsing issue.
+    If it does, any code snippet above can reference?
+    I will not include any codes to change the data type / remove the columns.
+need_to_clean: true/false
+# If need_to_clean is true, then the python_code is required.
+# Please follow the provided python example and avoid new codes
+python_code: |
+    def clean_df(df):
+        # Your code here: Simple and short (usually just a few lines), with detailed comments.
+        ...
+        return df_clean
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yaml_code(response['choices'][0]['message']["content"])
+        result = yaml.safe_load(yml_code)
+
+        if not result['need_to_clean']:
+            return self.para['df']
+
+        python_code = result['python_code']
+
+        for _ in range(2):
+            try:
+                df_input = self.para['df'].copy()
+                if 'clean_df' in globals():
+                    del globals()['clean_df']
+                exec(python_code, globals())
+                df_clean = clean_df(df_input)
+                return df_clean
+            except Exception:
+                detailed_error_info = get_detailed_error_info()
+                if cocoon_main_setting['DEBUG_MODE']:
+                    print(detailed_error_info)
+                    print(df_input)
+                error_message = f"""There is a bug in the code: {detailed_error_info}.
+First, study the error message and point out the problem.
+Then, fix the bug and return the complete corrected function in the following format:
+
+```yml
+explanation: >-
+    The error is due to ...
+python_code: |
+    def clean_df(df):
+        # Your code here
+        ...
+        return df_clean
+```"""
+                messages.append({"role": "user", "content": error_message})
+                response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+                yml_code = extract_yml_code(response['choices'][0]['message']['content'])
+                result = yaml.safe_load(yml_code)
+                messages.append(response['choices'][0]['message'])
+                python_code = result['python_code']
+
+        raise Exception("The code is not correct after multiple attempts. Please try again.")
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        return self.para['df']
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        df = run_output
+        df.columns = [clean_column_name(col) for col in df.columns]
+        con = self.para['con']
+        table_name = "input_table"
+        con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df")
+        callback({})
+        return 
+
+def create_column_map_workflow(para=None, output=None):
+    if para is None:
+        para = {}
+    main_workflow = Workflow("Column Map Workflow",
+                             item={},
+                             description="A workflow to map columns",
+                             para=para,
+                             output=output)
+    
+    main_workflow.add_to_leaf(ParseDFNode(output=output))
+    main_workflow.add_to_leaf(ColumnMapperNode(output=output))
+    main_workflow.add_to_leaf(ColumnTransformerNode(output=output))
+    return main_workflow
+
+
+def build_transformation_df(target_tables, validated_transformations):
+    all_transformations = []
+    
+    for table, columns in target_tables.items():
+        for column in columns['name']:
+            all_transformations.append({
+                'Output Table': table,
+                'Output Column': column,
+                'SQL Transformation': ''
+            })
+    
+    for transform in validated_transformations:
+        sql_clause = transform['sql_transform'] if transform['sql_transform'] else ''
+        if not sql_clause:
+            if len(transform['input_cols']) == 1:
+                sql_clause = f"\"{transform['input_cols'][0]}\""
+            else:
+                concat_cols = ', '.join(f'"{col}"' for col in transform['input_cols'])
+                sql_clause = f"CONCAT({concat_cols})"
+        
+        existing_entry = next((item for item in all_transformations 
+                               if item['Output Table'] == transform['output_table'] 
+                               and item['Output Column'] == transform['output_col']), None)
+        
+        if existing_entry:
+            existing_entry['SQL Transformation'] = sql_clause
+        else:
+            all_transformations.append({
+                'Output Table': transform['output_table'],
+                'Output Column': transform['output_col'],
+                'SQL Transformation': sql_clause
+            })
+    
+    return pd.DataFrame(all_transformations)
+
+def execute_transformations(con, transformation_df):
+    result = {}
+    for table in transformation_df['Output Table'].unique():
+        table_transformations = transformation_df[transformation_df['Output Table'] == table]
+        
+        clauses = []
+        columns = []
+        for _, row in table_transformations.iterrows():
+            columns.append(row['Output Column'])
+            if row['SQL Transformation']:
+                clauses.append(f"{row['SQL Transformation']} AS \"{row['Output Column']}\"")
+        
+        if clauses:
+            query = f"SELECT {', '.join(clauses)} FROM input_table"
+            df = con.execute(query).df()
+            for col in columns:
+                if col not in df.columns:
+                    df[col] = None
+            result[table] = df[columns]
+        else:
+            result[table] = pd.DataFrame(columns=columns)
+    
+    return result
+
+
+def create_mapping_from_df(mapping_df):
+    mapping = []
+    
+    grouped = mapping_df.groupby(['Input Column', 'Description'])
+    
+    for (input_col, description), group in grouped:
+        outputs = []
+        for _, row in group.iterrows():
+            if row['Output Table'] and row['Output Column']:
+                outputs.append({
+                    'output_table': row['Output Table'],
+                    'output_col': row['Output Column']
+                })
+        
+        item = {
+            'input_col': input_col,
+            'description': description,
+            'outputs': outputs
+        }
+        mapping.append(item)
+    
+    return mapping
+
+
+class RefineTransformationNode(Node):
+    default_name = 'Refine Transformation'
+    default_description = 'This node refines the column mapping and transformations based on a natural language query.'
+
+    def extract(self, item):
+        con = self.para['con']
+        target_tables = self.para['target_tables']
+        mapping_df = self.para['mapping_df'].copy(deep=True)
+        transformation_df = self.para['transformation_df'].copy(deep=True)
+        query = self.para['query']
+
+        mapping = create_mapping_from_df(mapping_df)
+
+        sample_query = "SELECT * FROM input_table LIMIT 100"
+        sample_df = con.execute(sample_query).df()
+        sample_df = sample_df.applymap(truncate_cell)
+
+        return {
+            'target_tables': target_tables,
+            'mapping': mapping,
+            'transformation_df': transformation_df,
+            'sample_df': sample_df,
+            'query': query
+        }
+
+    def run(self, extract_output, use_cache=True):
+        target_tables = extract_output['target_tables']
+        mapping = extract_output['mapping']
+        transformation_df = extract_output['transformation_df']
+        sample_df = extract_output['sample_df']
+        query = extract_output['query']
+        con = self.para['con']
+
+        target_tables_str = ""
+        for table_name, table_df in target_tables.items():
+            target_tables_str += f"Table Name: {table_name}\n"
+            target_tables_str += table_df.to_csv(index=False)
+            target_tables_str += "\n"
+
+        template = f"""You are an expert in data mapping and SQL transformations. Given the following information:
+
+## Sample of the input table (QUOTE_NONNUMERIC):
+{sample_df.to_csv(index=False, quoting=2)}
+
+## Target tables and their columns:
+{target_tables_str}
+
+## Current column mapping:
+{yaml.dump(mapping, default_flow_style=False)}
+
+## Current transformations:
+{transformation_df.to_csv(index=False)}
+
+Example transformations:
+{duckdb_cocoon_hint}
+
+## USER REQUEST:
+{query}
+## END OF USER REQUEST
+
+Please suggest updates to the column mapping and transformations based on the user's query. 
+If the user's query is not possible in SQL or not related to the data transformation, you can choose to not update and politely respond.
+Respond in YAML format as follows:
+
+```yaml
+mapping_updates:
+  - input_col: [input column name]
+    description: [description of the input column]
+    outputs:
+      - output_table: [target table name]
+        output_col: [target column name]
+transformation_updates:
+  - output_table: [target table name]
+    output_col: [target column name]
+    sql_transform: |
+      [SQL transformation clause or "" if not transformed]
+response: >-
+    Sure! I have mapped the columns and transformed the data based on your request. 
+```
+
+Only include columns that need to be updated or added. For unchanged columns, do not include them in the response."""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yaml_code(response['choices'][0]['message']["content"])
+        updates = yaml.safe_load(yml_code)
+
+        for update in updates.get('mapping_updates', []):
+            if update['input_col'] not in sample_df.columns:
+                raise ValueError(f"Input column '{update['input_col']}' does not exist.")
+            
+            for output in update.get('outputs', []):
+                output_table = output.get('output_table')
+                if output_table and output_table.strip():
+                    if output_table not in target_tables:
+                        raise ValueError(f"Output table '{output_table}' does not exist.")
+                else:
+                    output['output_table'] = None
+                    output['output_col'] = None
+
+        for update in updates.get('transformation_updates', []):
+            if update['output_table'] not in target_tables:
+                raise ValueError(f"Output table '{update['output_table']}' does not exist.")
+            if update['sql_transform'] is not None and update['sql_transform'].strip() == '""':
+                update['sql_transform'] = ''
+            if update['sql_transform'] is None or update['sql_transform'].strip() == '':
+                update['sql_transform'] = ""
+            elif update['sql_transform'].strip():
+                try:
+                    con.execute(f"SELECT {update['sql_transform']} AS \"{update['output_col']}\" FROM input_table LIMIT 1")
+                except Exception as e:
+                    print(f"SELECT {update['sql_transform']} AS \"{update['output_col']}\" FROM input_table LIMIT 1")
+                    raise ValueError(f"SQL error for {update['output_table']}.{update['output_col']}: {str(e)}")
+
+        return updates
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {
+            'mapping_updates': [],
+            'transformation_updates': [],
+            'response': "Sorry, there is something wrong with the request. Please try again."
+        }
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        updates = run_output
+        mapping = extract_output['mapping']
+        transformation_df = extract_output['transformation_df']
+
+        affected_input_cols = []
+        affected_output_cols = []
+
+        for update in updates.get('mapping_updates', []):
+            existing_item = next((item for item in mapping if item['input_col'] == update['input_col']), None)
+            if existing_item:
+                existing_item['description'] = update['description']
+                existing_item['outputs'] = update['outputs']
+            else:
+                mapping.append(update)
+            
+            affected_input_cols.append(update['input_col'])
+            for output in update['outputs']:
+                affected_output_cols.append([output['output_table'], output['output_col']])
+
+        target_tables = extract_output['target_tables']
+        for update in updates.get('transformation_updates', []):
+            if update['sql_transform'].strip() == '':
+                if update['output_table'] in target_tables and update['output_col'] not in target_tables[update['output_table']]['name'].values:
+                    transformation_df = transformation_df[
+                        ~((transformation_df['Output Table'] == update['output_table']) & 
+                          (transformation_df['Output Column'] == update['output_col']))
+                    ]
+                    continue
+
+            idx = transformation_df[(transformation_df['Output Table'] == update['output_table']) & 
+                                    (transformation_df['Output Column'] == update['output_col'])].index
+            if len(idx) > 0:
+                transformation_df.loc[idx, 'SQL Transformation'] = update['sql_transform']
+            else:
+                new_row = pd.DataFrame([{
+                    'Output Table': update['output_table'],
+                    'Output Column': update['output_col'],
+                    'SQL Transformation': update['sql_transform']
+                }])
+                transformation_df = pd.concat([transformation_df, new_row], ignore_index=True)
+            
+            affected_output_cols.append([update['output_table'], update['output_col']])
+
+        mapping_df = create_mapping_df(mapping)
+
+        return callback({
+            'mapping': mapping,
+            'mapping_df': mapping_df,
+            'transformation_df': transformation_df,
+            'response': updates['response'],
+            'affected_input_cols': list(set(affected_input_cols)),
+            'affected_output_cols': list(map(list, set(map(tuple, affected_output_cols))))
+        })
+        
+def create_refine_transformation_workflow(para=None, output=None):
+    if para is None:
+        para = {}
+    refine_workflow = Workflow("Refine Transformation Workflow",
+                               item={},
+                               description="A workflow to refine column mapping and transformations",
+                               para=para,
+                               output=output)
+    
+    refine_workflow.add_to_leaf(RefineTransformationNode(output=output))
+    return refine_workflow
+
+
+class MultiCatalogStreamlitAgent:
+    def __init__(self, data_catalogs, debug=False, track_cost=False):
+        self.data_catalogs = data_catalogs
+        self.conversation_history = []
+        self.internal_chat = []
+        self.step_count = 0
+        self.debug = debug
+        self.explored_item_ids = set()
+        self.track_cost = track_cost
+        self.session_cost = 0 if track_cost else None
+
+    def generate_initial_prompt(self, user_question):
+        catalog_contexts = []
+        for idx, catalog in enumerate(self.data_catalogs, 1):
+            catalog_context = catalog.generate_text_summary(idx=idx)
+            catalog_contexts.append(f"Catalog {idx}: '{catalog.get_name()}'\n{catalog_context}")
+        
+        all_catalog_contexts = "\n\n".join(catalog_contexts)
+        
+        prompt = f"""{all_catalog_contexts}
+
+## General Principles
+1. Prioritize SQL-based answers using existing items in the catalogs.
+2. Be evidence-based, referencing `item_name` and ```sql codes``` frequently.
+3. Explore related items for context.
+4. Keep responses concise.
+5. Persist in exploration if information seems insufficient.
+
+## Syntax Guidelines
+- Reference models: `model_name`
+- SQL code blocks:
+  ```sql
+  SELECT ...
+  ```
+- New model creation:
+  ```sql
+  -- model_name: 'new_model_name'
+  SELECT ...
+  ```
+
+## Editing Existing Models
+- Highlight changes only:
+  ```sql
+  -- model_name: 'existing_model_name'
+  -- ... existing code ...
+  {{ edit_1 }}
+  -- ... existing code ...
+  {{ edit_2 }}
+  -- ... existing code ...
+  ```
+- Skip unchanged parts (start/end of file).
+- Rewrite entire file only if explicitly requested.
+- Consider downstream effects when editing.
+- Propose edits for affected downstream models.
+
+Note that you can only modify sql. If asked to modify other, politely reject.
+
+## Your actions (one at a time):
+1. Explore the catalogs to answer the user's question. 
+---cocoon_start---
+reason: >-
+    The most relevant items are ...
+action: explore
+items:
+  - catalog_id: 1
+    item_ids: [<list of up to 10 item ids to explore; preferably include related items for better context>]
+  - catalog_id: 2
+    item_ids: [<list of up to 10 item ids to explore; preferably include related items for better context>]
+---cocoon_end---
+
+2. Answer the question based on the current context (or explain why you can't).
+---cocoon_start---
+reason: >-
+    I'm going to answer the user's question. I have explored all the relevant items / I still need to explore ...[action becomes explore]
+action: conclude
+answer: |
+    <reference `item_name` and ```sql codes```>
+---cocoon_end---
+
+Now answer the question: "{user_question}"
+Your action:"""
+        self.print_message("user", prompt)
+        return prompt
+
+    def generate_follow_up(self, user_question):
+        return f'User follow-up question: "{user_question}"\nFor explore action, don\'t include item ids already explored.\nYour action:'
+
+    def process_user_question(self, user_question):
+        if not self.conversation_history:
+            initial_prompt = self.generate_initial_prompt(user_question)
+            self.conversation_history = [{"role": "user", "content": initial_prompt}]
+        else:
+            follow_up_prompt = self.generate_follow_up(user_question)
+            self.conversation_history.append({"role": "user", "content": follow_up_prompt})
+        
+        self.internal_chat.append(("user", [("markdown", user_question)]))
+
+        max_rounds = 10
+        for _ in range(max_rounds):
+            for attempt in range(5):
+                try:
+                    use_cache = (attempt == 0)
+                    if self.track_cost:
+                        response, cost = call_llm_chat(self.conversation_history, temperature=0.1, top_p=0.1, return_cost=True, use_cache=use_cache)
+                        self.session_cost += cost
+                    else:
+                        response = call_llm_chat(self.conversation_history, temperature=0.1, top_p=0.1, use_cache=use_cache)
+                    
+                    llm_message = response['choices'][0]['message']
+                    
+                    yaml_content = extract_special_code(llm_message["content"])
+                    decision = yaml.safe_load(yaml_content)
+
+                    if decision['action'] in ['explore', 'conclude']:
+                        self.conversation_history.append(llm_message)
+                        self.print_message(llm_message["role"], llm_message["content"])
+                        
+                        if decision['action'] == 'explore':
+                            self.explore_items(decision.get('reason', 'No reason provided'), decision.get('items', []))
+                        else:
+                            self.conclude(decision)
+                            return decision
+                        
+                        break
+                except Exception as e:
+                    if cocoon_main_setting.get('DEBUG_MODE', False):
+                        raise
+                    
+                    if attempt == 4:
+                        decision = {
+                            "action": "conclude",
+                            "answer": "There seems to be some issue processing your request. Could you please rephrase your question or provide more details?"
+                        }
+                        self.conclude(decision)
+                        return decision
+                    
+                    time.sleep(5)
+                    continue
+
+        return {"action": "conclude", "answer": "Max rounds reached without a conclusion. Please try rephrasing your question."}
+
+    def explore_items(self, reason, items):
+        exploration_results = []
+        newly_explored_items = []
+        for item in items:
+            catalog_id = item['catalog_id']
+            catalog = self.data_catalogs[catalog_id - 1]
+            catalog_results = []
+            for item_id in item['item_ids']:
+                item_name = catalog.get_item_name_by_id(item_id)
+                full_item_id = f"{catalog_id}.{item_id}"
+                if full_item_id in self.explored_item_ids:
+                    catalog_results.append(f"{item_id}. {item_name}:\nAlready explored before")
+                else:
+                    item_summary_text = catalog.generate_item_text_summary(item_id=item_id)
+                    catalog_results.append(f"{item_id}. {item_name}\n{item_summary_text}")
+                    self.explored_item_ids.add(full_item_id)
+                    newly_explored_items.append(full_item_id)
+            
+            if catalog_results:
+                catalog_name = catalog.get_name()
+                catalog_results_text = "\n\n".join(catalog_results)
+                exploration_results.append(f"# Catalog {catalog_id}: {catalog_name}\n\n{catalog_results_text}")
+
+        combined_results = "\n\n".join(exploration_results)
+        follow_up_prompt = f"""Exploration results:
+{combined_results}
+
+Your next action (Explore or Conclude):"""
+        self.print_message("user", follow_up_prompt)
+        self.conversation_history.append({"role": "user", "content": follow_up_prompt})
+
+        self.internal_chat.append(("Cocoon", [
+            ("markdown", f"**RAG Data Pipeline...**\n\n{reason}"),
+            ("cocoon", items)
+        ]))
+
+    def conclude(self, decision):
+        content = decision.get('answer', '')
+        self.internal_chat.append(("assistant", [("markdown", content)]))
+
+    def print_message(self, role, content):
+        if self.debug:
+            self.step_count += 1
+            print(f"\n--- Step {self.step_count}: {role.capitalize()} Message ---\n")
+            print(content)
+            print("\n--- End of Message ---\n")
+
+    def get_session_cost(self):
+        if self.track_cost:
+            return f"${self.session_cost:.4f}"
+        else:
+            return "not enabled"
+
+    def display_chat_history(self):
+        for role, content_list in self.internal_chat:
+            with st.chat_message(role):
+                for content_type, content in content_list:
+                    if content_type == 'markdown':
+                        st.markdown(content, unsafe_allow_html=True)
+                    elif content_type == 'html':
+                        st.components.v1.html(content, height=300, scrolling=True)
+                    elif content_type == 'sql':
+                        st.code(content, language="sql")
+                    elif content_type == 'yml':
+                        st.markdown(
+                            f"""
+                            <div style="max-height: 500px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;">
+                            <pre><code class="language-yaml">{content}</code></pre>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+                    elif content_type == 'cocoon':
+                        self.display_cocoon_content(content)
+                    else:
+                        st.text(content)
+        
+        if self.track_cost:
+            st.markdown(f"<small>Cost estimation: {self.get_session_cost()}</small>", unsafe_allow_html=True)
+
+    def display_cocoon_content(self, items):
+        for item in items:
+            catalog_id = item['catalog_id']
+            catalog = self.data_catalogs[catalog_id - 1]
+            st.subheader(f"Catalog {catalog_id}: {catalog.get_name()}")
+            catalog.create_data_selectbox(model_ids=item['item_ids'])
+
+
+class AnalyzeModelUpstreamsSingleNode(Node):
+    default_name = 'Analyze Single Model Upstreams'
+    default_description = 'This node analyzes the SQL of a single model in the DBT lineage to determine upstream dependencies.'
+
+    def extract(self, item):
+        self.input_item = item
+        dbt_lineage = item['dbt_lineage']
+        model_name = self.para['model_name']
+        
+        model_info = dbt_lineage.conn.execute("""
+            SELECT raw_code, compiled_code
+            FROM model
+            WHERE model_name = ?
+        """, (model_name,)).fetchone()
+        
+        if model_info and (model_info[1] or model_info[0]):
+            sql = model_info[1] if model_info[1] else model_info[0]
+        else:
+            sql = None
+        
+        return {'model_name': model_name, 'sql': sql}
+
+    def run(self, extract_output, use_cache=True):
+        model_name = extract_output['model_name']
+        sql = extract_output['sql']
+        
+        display(HTML(f"Working on model: {model_name}"))
+        
+        if sql is None:
+            return {
+                'model_name': model_name,
+                'upstream_models': {
+                    'existing': [],
+                    'new': []
+                }
+            }
+        
+        dbt_lineage = self.input_item['dbt_lineage']
+        catalog_context = dbt_lineage.generate_text_summary()
+        
+        template = f"""{catalog_context}
+
+Analyze the following model and its SQL to determine its upstream dependencies:
+
+Model Name: {model_name}
+SQL:
+```sql
+{sql}
+```
+
+Please provide the upstream models for this model. If the upstream is an existing model in the lineage, provide its name. If it's a new model referenced in the SQL but not in the lineage, provide its exact name as referenced in the SQL.
+
+Respond in the following YAML format:
+```yaml
+model_name: {model_name}
+upstream_models:
+  # Skip this field if no existing upstream models
+  existing:
+    - existing model id as integer
+  # Skip this field if no new upstream models
+  new:
+    - >-
+      extract model name from SQL as string
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yaml_code(response['choices'][0]['message']["content"])
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+
+        dbt_lineage = self.input_item['dbt_lineage']
+        existing_model_ids = set(row[0] for row in dbt_lineage.conn.execute("""
+            SELECT new_rowid
+            FROM ordered_models
+            ORDER BY new_rowid
+        """).fetchall())
+
+        if 'upstream_models' not in summary or not isinstance(summary['upstream_models'], dict):
+            summary['upstream_models'] = {}
+
+        if 'existing' not in summary['upstream_models'] or summary['upstream_models']['existing'] is None:
+            summary['upstream_models']['existing'] = []
+        
+        reported_existing = [model_id for model_id in summary['upstream_models']['existing']
+                             if isinstance(model_id, int)]
+
+        non_existent = [model_id for model_id in reported_existing if model_id not in existing_model_ids]
+        if non_existent:
+            raise ValueError(f"The following reported 'existing' model IDs do not exist in the database: {', '.join(map(str, non_existent))}")
+
+        summary['upstream_models']['existing'] = reported_existing
+
+        if 'new' not in summary['upstream_models'] or summary['upstream_models']['new'] is None:
+            summary['upstream_models']['new'] = []
+
+        summary['upstream_models']['new'] = list(set(
+            model for model in summary['upstream_models']['new']
+            if model and model.strip()
+        ))
+
+        return summary
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        dbt_lineage = self.input_item['dbt_lineage']
+        model_name = self.para['model_name']
+        
+        existing_upstream_names = []
+        for existing_upstream_id in run_output['upstream_models'].get('existing', []):
+            existing_upstream_name = dbt_lineage.get_item_name_by_id(existing_upstream_id)
+            if existing_upstream_name != model_name:
+                existing_upstream_names.append(existing_upstream_name)
+        
+        for existing_upstream_name in existing_upstream_names:
+            dbt_lineage.add_model_lineage(existing_upstream_name, model_name)    
+        
+        for new_upstream in run_output['upstream_models'].get('new', []):
+            if new_upstream not in dbt_lineage.conn.execute("SELECT model_name FROM model").fetchall():
+                dbt_lineage.add_or_update_model({
+                    'model_name': new_upstream
+                })
+            dbt_lineage.add_model_lineage(new_upstream, model_name)
+        
+        return callback(run_output)
+
+class AnalyzeModelUpstreamsMultipleNode(MultipleNode):
+    default_name = 'Analyze Model Upstreams'
+    default_description = 'This node analyzes the SQL of all models in the DBT lineage to determine upstream dependencies.'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["model_name"] = element_name
+        para["idx"] = idx
+        para["total"] = total
+        node = AnalyzeModelUpstreamsSingleNode(para=para, id_para="model_name")
+        node.inherit(self)
+        return node
+
+    def extract(self, item):
+        self.input_item = item
+        dbt_lineage = item['dbt_lineage']
+        
+        dbt_lineage.invalidate_lineage_cache()
+        models = dbt_lineage.get_ordered_models()
+        
+        filtered_models = []
+        for model in models:
+            model_name = model[0]
+            
+            raw_code = dbt_lineage.conn.execute("""
+                SELECT raw_code
+                FROM model
+                WHERE model_name = ?
+            """, (model_name,)).fetchone()
+            
+            if not raw_code or not raw_code[0]:
+                continue
+            
+            upstream_models = dbt_lineage.conn.execute("""
+                SELECT source_model_name
+                FROM model_lineage
+                WHERE target_model_name = ?
+            """, (model_name,)).fetchall()
+            
+            if upstream_models:
+                continue
+            
+            filtered_models.append(model)
+        
+        self.elements = [model[0] for model in filtered_models]
+        self.nodes = {element: self.construct_node(element, idx, len(self.elements))
+                      for idx, element in enumerate(self.elements)}
+
+def create_dbt_lineage_analysis_workflow(dbt_lineage, output=None):
+    workflow = Workflow("DBT Lineage Analysis Workflow",
+                        item={'dbt_lineage': dbt_lineage},
+                        description="A workflow to analyze DBT lineage and determine model dependencies",
+                        output=output)
+    
+    workflow.add_to_leaf(AnalyzeModelUpstreamsMultipleNode(output=output))
+    return workflow

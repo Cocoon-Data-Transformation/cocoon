@@ -45,39 +45,57 @@ def extract_python_code(s):
     match = re.search(pattern, s, re.DOTALL)
     return match.group(1).strip() if match else s
 
+def extract_special_code(s, start="---cocoon_start---", end="---cocoon_end---"):
+    import re
+    pattern = rf"{re.escape(start)}(.*?){re.escape(end)}"
+    match = re.search(pattern, s, re.DOTALL)
+    return match.group(1).strip() if match else s
+
+
+def extract_yaml_code(s):
+    import re
+    pattern = r"```yaml(.*?)```"
+    match = re.search(pattern, s, re.DOTALL)
+    return match.group(1).strip() if match else s
+
 
 def extract_yml_code(text):
     yml_content = []
     i = 0
     in_yml = False
     nested_level = 0
+    supported_languages = [
+        'yml', 'yaml', 'json', 'python', 'sql',
+        'javascript', 'js', 'typescript', 'ts',
+        'html', 'css', 'bash', 'shell', 'sh',
+        'ruby', 'php', 'java', 'c', 'cpp', 'csharp', 'cs',
+        'go', 'rust', 'swift', 'kotlin', 'scala',
+        'r', 'matlab', 'perl', 'lua', 'haskell',
+        'xml', 'markdown', 'md', 'tex', 'latex',
+        'dockerfile', 'makefile', 'toml', 'ini'
+    ]
 
     while i < len(text):
         if text[i:i+6] == '```yml' and not in_yml:
             in_yml = True
             i += 6
         elif text[i:i+3] == '```' and in_yml:
-            if i+3 < len(text) and text[i+3:i+6] == 'sql':
-                nested_level += 1
-                yml_content.append(text[i:i+6])
-                i += 6
-            elif i+4 < len(text) and text[i+3:i+7] == 'json':
-                nested_level += 1
-                yml_content.append(text[i:i+7])
-                i += 7
-            elif i+6 < len(text) and text[i+3:i+9] == 'python':
-                nested_level += 1
-                yml_content.append(text[i:i+9])
-                i += 9
-            elif nested_level > 0:
-                nested_level -= 1
-                yml_content.append(text[i:i+3])
-                i += 3
-            elif nested_level == 0:
-                break
+            for lang in supported_languages:
+                if i+3+len(lang) <= len(text) and text[i+3:i+3+len(lang)] == lang:
+                    nested_level += 1
+                    yml_content.append(text[i:i+3+len(lang)])
+                    i += 3 + len(lang)
+                    break
             else:
-                yml_content.append(text[i])
-                i += 1
+                if nested_level > 0:
+                    nested_level -= 1
+                    yml_content.append(text[i:i+3])
+                    i += 3
+                elif nested_level == 0:
+                    break
+                else:
+                    yml_content.append(text[i])
+                    i += 1
         elif in_yml:
             yml_content.append(text[i])
             i += 1

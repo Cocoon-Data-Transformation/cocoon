@@ -115,7 +115,7 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True, api_type
     global openai
     message_hash = hash_messages(messages)
 
-    if use_cache:
+    if use_cache and cocoon_main_setting.get('allow_cache', True):
         cached_response = lru_cache.get(message_hash)
         if cached_response is not None:
             lru_cache.save_to_disk()

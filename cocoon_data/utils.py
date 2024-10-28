@@ -84,6 +84,8 @@ def clean_table_name(table_name):
     return sanitize_table_name(table_name)
 
 def clean_column_name(column_name):
+    column_name = str(column_name)
+    
     reserved_words = {
         "ABSOLUTE", "ACTION", "ADA", "ADD", "ALL", "ALLOCATE", "ALTER", "AND", "ANY", "ARE", "AS", "ASC",
         "ASSERTION", "AT", "AUTHORIZATION", "AVG", "BACKUP", "BEGIN", "BETWEEN", "BIT", "BIT_LENGTH", "BOTH",

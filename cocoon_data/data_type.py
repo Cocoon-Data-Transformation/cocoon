@@ -107,6 +107,26 @@ def is_type_comparable(data_type):
     return is_type_time(data_type) or is_type_string(data_type) or \
         is_type_numeric(data_type) or is_type_id(data_type) or is_type_boolean(data_type)
 
+duckdb_cocoon_hint = """
+- Extract last name from full name: list_extract(string_split("full_name", ' '), -1)
+- Extract year from a date string: EXTRACT(YEAR FROM CAST(strptime('02/03/1992', '%d/%m/%Y') AS DATE))
+- Calculate age from birthdate: EXTRACT(YEAR FROM CURRENT_DATE) - EXTRACT(YEAR FROM CAST("birthdate" AS DATE))
+- Convert 'yes'/'no' to boolean: CASE WHEN col = 'no' THEN false ELSE true END
+- Extract number from string: CAST(REGEXP_EXTRACT('35.2 KG', '(\d+(\.\d+)?)') AS DECIMAL)
+- Convert string to date: CAST(strptime('02/03/1992', '%d/%m/%Y') AS DATE)
+- Convert string to time: CAST(strptime('14:30:45', '%H:%M:%S') AS TIME)
+- Concatenate strings: CONCAT("first_name", ' ', "last_name")
+- Get the first 3 digits for number: SUBSTRING(REGEXP_REPLACE(CAST("number" AS VARCHAR), '[^0-9]', ''), 1, 3)
+- Convert number to string with leading zeros: LPAD(CAST(123 AS VARCHAR), 5, '0')
+- Convert string with commas to decimal: CAST(REGEXP_REPLACE('1,234,567.89', ',', '', 'g') AS DECIMAL)
+- Round number to 2 decimal places: ROUND(123.4567, 2)
+- Convert UNIX timestamp to datetime: TO_TIMESTAMP(1634319300)
+- Convert string to uppercase: UPPER('hello world')
+- Trim whitespace from both ends of a string: TRIM('   padded string   ')
+- Extract hour from timestamp: EXTRACT(HOUR FROM CAST('2023-10-15 14:30:45' AS TIMESTAMP))
+- Extract date from timestamp: CAST(CAST("my_time" AS TIMESTAMP) AS DATE)
+"""
+
 transform_hints = {
     'VARCHAR':{
         'DATE': {

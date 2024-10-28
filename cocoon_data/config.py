@@ -47,5 +47,6 @@ cocoon_main_setting = {
     'MAX_TRIALS': 3,
     'icon_import': False,
     'file_system': 'local',
+    "allow_cache": True,
 }
 

@@ -205,6 +205,17 @@ def create_bar_chart_viz_html(data_dict):
 
 
 
+def generate_draggable_graph_html_dynamically(graph_data):
+    number_nodes = len(graph_data["nodes"])
+    svg_width = min(800, 300 + 50 * number_nodes)
+    svg_height = 100 + number_nodes * 30
+    return svg_width, svg_height, generate_draggable_graph_html_color(graph_data, svg_height, svg_width)
+
+
+def display_draggable_graph_html(graph_data):
+    _, svg_height, html_content = generate_draggable_graph_html_dynamically(graph_data)
+    display_html_iframe(html_content, width="100%", height=f"{svg_height+20}px")
+
 
 def generate_draggable_graph_html_color(data, svg_height=300, svg_width=1000):
     
@@ -1625,3 +1636,82 @@ def generate_side_list_and_tab_content(items):
         """
     
     return side_list_html, tab_content_html
+
+
+
+
+
+def generate_workflow_html(nodes, edges, edge_labels=None, highlight_nodes=None, highlight_edges=None, height=400):
+    dot = Digraph(format='png')
+
+    if edge_labels is None:
+        edge_labels = {}
+    if highlight_nodes is None:
+        highlight_nodes = []
+    if highlight_edges is None:
+        highlight_edges = []
+
+    node_style = {
+        'style': 'filled',
+        'fillcolor': '#DAE8FC',
+        'color': '#6C8EBF',
+        'shape': 'box',
+        'fontname': 'Helvetica',
+        'fontsize': '8',
+        'fontcolor': '#2E4057',
+        'margin': '0.1,0.02',
+        'height': '0.3',
+        'width': '0.5'
+    }
+
+    highlighted_node_style = {
+        'fillcolor': '#FFD580',
+        'color': '#FFA500'
+    }
+
+    edge_style = {
+        'color': '#6C8EBF',
+        'arrowsize': '0.5',
+        'penwidth': '0.6',
+        'fontname': 'Helvetica',
+        'fontsize': '8',
+        'fontcolor': '#2E4057',
+    }
+
+    highlighted_edge_style = {
+        'color': '#FFA500',
+        'penwidth': '2.0'
+    }
+
+    for node in nodes:
+        if node in highlight_nodes:
+            dot.node(node, node, **{**node_style, **highlighted_node_style})
+        else:
+            dot.node(node, node, **node_style)
+
+    for tail, heads in edges.items():
+        for head in heads:
+            label = edge_labels.get((tail, head), '')
+            if (tail, head) in highlight_edges:
+                dot.edge(nodes[tail], nodes[head], label=label, **{**edge_style, **highlighted_edge_style})
+            else:
+                dot.edge(nodes[tail], nodes[head], label=label, **edge_style)
+
+    png_image = dot.pipe()
+
+    encoded_image = base64.b64encode(png_image).decode()
+    return encoded_image
+
+def display_workflow(nodes, edges, edge_labels=None, highlight_nodes=None, highlight_edges=None, height=400):
+    encoded_image = generate_workflow_html(nodes, edges, edge_labels, highlight_nodes, highlight_edges, height)
+    scrollable_html = f"""
+    <div style="max-height: {height}px; overflow: auto; border: 1px solid #cccccc;">
+        <img src="data:image/png;base64,{encoded_image}" alt="Workflow Diagram" style="display: block; max-width: none; height: auto;">
+    </div>
+    """
+    display(HTML(scrollable_html))
+
+
+
+
+
