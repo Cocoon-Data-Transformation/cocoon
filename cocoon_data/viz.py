@@ -212,9 +212,6 @@ def generate_draggable_graph_html_dynamically(graph_data):
     return svg_width, svg_height, generate_draggable_graph_html_color(graph_data, svg_height, svg_width)
 
 
-def display_draggable_graph_html(graph_data):
-    _, svg_height, html_content = generate_draggable_graph_html_dynamically(graph_data)
-    display_html_iframe(html_content, width="100%", height=f"{svg_height+20}px")
 
 
 def generate_draggable_graph_html_color(data, svg_height=300, svg_width=1000):

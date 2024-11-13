@@ -1094,6 +1094,10 @@ def plot_distribution(df, column_name):
     return image_base64
 
 
+def display_draggable_graph_html(graph_data):
+    _, svg_height, html_content = generate_draggable_graph_html_dynamically(graph_data)
+    display_html_iframe(html_content, width="100%", height=f"{svg_height+20}px")
+
 def display_html_iframe(html_content, width="100%", height=None):
 
     encoded_html = base64.b64encode(html_content.encode()).decode()
@@ -29418,7 +29422,6 @@ CREATE TABLE model_column (
             """, (source_model_name, target_model_name))
             
             self.invalidate_lineage_cache()
-            self.get_ordered_models()
 
     def add_or_update_column_lineage(self, column_lineage_data):
         columns = ', '.join(column_lineage_data.keys())
@@ -29481,7 +29484,6 @@ CREATE TABLE model_column (
                 }
                 self.add_or_update_column(column_info)
         
-        self.compute_lineage_info()
     
     def compute_lineage_info(self):
         table_exists = self.conn.execute("""
