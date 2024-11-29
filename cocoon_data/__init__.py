@@ -31456,8 +31456,8 @@ class DBTProjectConfigAndReadMultiple(MultipleNode):
         return node
     
     def extract(self, item):
-        source_directory = self.para["source_dbt_directory"]
-        target_directory = self.para["target_dbt_directory"]
+        source_directory = self.para.get("source_dbt_directory", None)
+        target_directory = self.para.get("target_dbt_directory", None)
         
         self.elements = ["source", "target"]
         self.nodes = {
@@ -31980,6 +31980,135 @@ join_graph:
         
         display(HTML(html_output))
         display(next_button)
+
+
+
+class GenerateColumnsAndKeys(Node):
+    default_name = 'Generate Columns and Keys'
+    default_description = 'Generate the columns and keys for the target table'
+
+    def extract(self, input_item):
+        
+        print("🔑 Generating the columns and keys...")
+        self.progress = show_progress(1)
+        
+        code_document = self.get_sibling_document("Write Codes For All").get("Write SQL code", {})
+        join_document = self.get_sibling_document('Join Graph Builder')
+        table_to_primary_key = {}
+        
+        for join in join_document["join_graph"]:
+            foreign_table, foreign_key, primary_table, primary_key = join
+            table_to_primary_key[primary_table] = primary_key
+        
+        code_clauses_for_tables = {}
+        for table in code_document:
+            code_clauses = self.get_sibling_document("Write Codes For All")["Write SQL code"][table]["Decide Distinct"]
+            code_clauses = copy.deepcopy(code_clauses)
+            if table in table_to_primary_key:
+                primary_key = table_to_primary_key[table]
+                code_clauses["primary_key"] = primary_key
+            code_clauses_for_tables[table] = code_clauses
+        
+            
+        return code_clauses_for_tables, join_document
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        code_clauses, join_document = extract_output
+        
+        print(code_clauses)
+        if not code_clauses:
+            callback(code_clauses)
+            return
+        
+        
+        table_pipeline = self.para["source_table_pipeline"]
+        con = self.item["con"]
+        
+
+        primary_key_clause = []
+        column_selection = []
+        for table_name, table_info in code_clauses.items():
+
+            if table_info["need_aggregation"]:
+                continue
+            
+            column_selection += table_info['selection_clause']
+                        
+            if 'primary_key' not in table_info or not table_info['primary_key']:
+                continue
+
+            
+            if table_info['need_distinct']:
+                surrogate_key = f"MD5(CONCAT({', '.join(table_info['output_columns'])})) AS {table_info['primary_key']}"
+                primary_key_clause.append(surrogate_key)
+            else:
+                new_unique_key = f"row_number() OVER () AS {table_info['primary_key']}"
+                primary_key_clause.append(new_unique_key)
+
+        combined_selection_clause = indent_paragraph(',\n'.join(["*"] + column_selection + primary_key_clause))
+                
+        sql_query = f"SELECT \n{combined_selection_clause}\nFROM {table_pipeline}"
+        print(sql_query)
+        
+        if "chatui" in self.para:
+            create_sql = 'CREATE OR REPLACE TABLE "cocoon_intermediate" AS' + sql_query
+            message = f"✅ <b>We have finished the SQL to enrich original table with primark\y keys!</b> {highlight_sql_only(create_sql)}"
+            self.para["chatui"].add_message("GenAI", message)
+        
+        
+        
+        
+        
+        orginal_name = "cocoon_intermediate"
+        
+        for table_name, table_info in code_clauses.items():
+            for join in join_document["join_graph"]:
+                foreign_table, foreign_key, primary_table, primary_key = join
+                if foreign_table == table_name:
+                    table_info['selection_clause'].append(f"{primary_key} AS {foreign_key}")
+            
+            if 'primary_key' in table_info and table_info['primary_key']:
+                table_info['selection_clause'].append(table_info["primary_key"])
+                
+            selection_clause = indent_paragraph(",\n".join(table_info['selection_clause']))
+            distinct_clause = "DISTINCT" if table_info["need_distinct"] else ""
+            sql_query = f"""SELECT {distinct_clause}
+{selection_clause}
+FROM {orginal_name}
+{'WHERE ' + table_info['condition_clause'] if table_info['condition_clause'] else ''}
+{'' if not table_info['group_by_clause'] else 'GROUP BY ' + table_info['group_by_clause']} 
+{'' if not table_info['having_clause'] else 'HAVING ' + table_info['having_clause']}"""
+
+
+
+
+                
+            
+                
+            print(sql_query)
+            if "chatui" in self.para:
+                message = f"✅ <b>We have finished the SQL for {table_name}</b> {highlight_sql_only(sql_query)}"
+                self.para["chatui"].add_message("GenAI", message)
+            
+        
+        
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+        )
+        
+        def on_next_button_clicked(b):
+            clear_output(wait=True)
+            callback(code_clauses)
+        
+        next_button.on_click(on_next_button_clicked)
+        display(next_button)
+        
+        
+            
+
 
 class SQLQueryMatchingConstructor(Node):
     default_name = 'SQL Query Constructor'
