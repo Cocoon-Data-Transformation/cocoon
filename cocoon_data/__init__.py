@@ -36240,7 +36240,7 @@ Your next action (Explore or Conclude):"""
                             unsafe_allow_html=True
                         )
                     elif content_type == 'cocoon':
-                        self.dbt_lineage.create_dbt_lineage_selectbox(model_ids=content)
+                        self.dbt_lineage.create_data_selectbox(model_ids=content)
                     else:
                         st.text(content)
         
