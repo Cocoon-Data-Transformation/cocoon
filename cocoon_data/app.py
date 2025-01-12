@@ -265,7 +265,7 @@ def catalog_details_page(catalog_obj):
     col2.button("View Chat History", on_click=lambda: setattr(st.session_state, 'page', f'chat_{catalog_obj.get_name()}'), use_container_width=True)
     col3.button("Delete Catalog", type="primary", on_click=delete_catalog, args=(catalog_obj.get_name(),), use_container_width=True)
 
-    catalog_obj.create_dbt_lineage_selectbox()
+    catalog_obj.create_data_selectbox()
 
     user_input = st.chat_input("Ask a question about the catalog...", key="catalog_chat_input")
 
