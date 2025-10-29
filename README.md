@@ -2,7 +2,7 @@
   <img src="./images/cocoon_logo.png" alt="Cocoon Logo" width="400"/>
 </div>
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/LICENSE)
 
 Building a chatbot for your data and pipelines is challenging because they are often too large (e.g., 1,000+ tables) to fit within the LLM context window. Cocoon addresses this by creating a RAG layer for your data and pipelines. With Cocoon's RAG, we offer a cursor-style chatbot for your data tasks.
 
